@@ -1,0 +1,117 @@
+DESCRIPTION
+    tailp (tail+) - Outputs, filters and highlights text from file(s) on disk, network and archives.
+    Inspired by tail and grep command line utilities.
+
+QUICK REFERENCE (EXAMPLES)
+    1. Print last 10 lines from file and follow changes. Truncate long lines:
+
+       tailp c:\windows\WindowsUpdate.log -n 10 -f -t
+
+    2. Same as (1), but shows only lines containing "COMAPI" or "START", follow all *.log files:
+
+       tailp -t c:\windows\*.log -n 10 -f -S COMAPI -S START
+
+    3. Same as (2), and highlight ClientId by using regex:
+
+       tailp -t c:\windows\*.log -n 10 -f -S COMAPI -S START -R -L "ClientId = .*"
+
+    4. Shows AssemblyInfo.cs files in archive, that does NOT contains * char in AssemblyVersion:
+
+       tailp e:\3.rar\AssemblyInfo.cs* -S AssemblyVersion -H *
+
+DETAILED REFERENCE
+    tailp [PARAMS] <file(s)> [PARAMS] <file(s)> ...
+
+    <file(s)>:
+        One or more files. Masks * and ? are allowed.
+        Supported archives: ZIP, RAR (RAR5 not supported), 7z.
+        Examples:
+          c:\*.txt                All text files in c:\.
+                                    If -r|--recursive param is used, all subdirectories are
+                                    searched.
+          c:\1.rar                All files in archive 1.rar.
+          c:\1.rar\*.txt          All text files in archive 1.rar. Recursion is always used.
+          c:\1.rar\2\dummy.txt    The file dummy.txt in folder 2 of archive 1.rar.
+
+PARAMS / GENERIC
+    -h|--help                          Shows this information.
+
+PARAMS / FILES
+    -r|--recursive                     Search files in subdirectories.
+                                         Applicable only when * or ? mask are used.
+
+    -c|--location <LOCATION>           Starts to read file from specified LOCATION;
+                                         Supported formats: p(percent), b(bytes).
+                                         Examples: 80p, 102400b.
+
+    -f|--follow                        Output appended data as the file(s) grows.
+                                         If file is removed or replaced, following starts from
+                                           beginning.
+
+PARAMS / OUTPUT
+    -n|--lines <NUM>                   Output the last NUM lines.
+                                         Only filtered lines are counted.
+                                         In "follow" mode, only first processing of file(s) skips
+                                           lines.
+    -n|--lines <+NUM>                  Output starting with line NUM.
+                                         Only filtered lines are counted.
+
+    -q|--quiet|--silent                Never output headers giving file names.
+    -v|--verbose                       Always output headers giving file names.
+                                         By default, file name is showing when several files are
+                                           found.
+
+    -N|--line-number                   Prefix each line of output with the 1-based line number
+                                         within file.
+                                         If -c|--location param is used, line numbers are
+                                           calculated relative to starting location.
+                                         If -l|--logical-lines param is used, logical line numbers
+                                           are calculated.
+
+    -t|--truncate                      Truncates long lines at console width.
+                                         If PATTERN is not matched, line is truncated from end.
+                                         If PATTERN is matched, unmatched parts of line is
+                                           truncated.
+                                         Truncated text is replaced by ">" at the end or by "<...>"
+                                           in the middle.
+
+PARAMS / MATCHING											  
+    -l|--logical-lines <MARKER>        Treats several text lines as a singe logical line (message),
+                                         if line NOT begin with <MARKER>.
+                                         Examples for <MARKER>:
+                                           2017-    : for logs beginning with date/time;
+                                           <        : for logs beginning with line number in <NNN>
+                                                      format.
+
+    -L|--highlight <PATTERN>           Highlighting matched text
+    -S|--show <PATTERN>                Showing only lines, having matched pattern
+    -H|--hide <PATTERN>                Do not showing lines, having matched pattern
+                                         -L, -S and -H params may be added multiple times
+                                         If no -S and -H params are provided, entire file is printed
+                                         If both -S and -H pattern matches, line is hided 
+                                         If -l|--logical-lines param is used, matching applies to
+                                           logical line
+
+    -R|--regex                         By default tailp uses string comparison to filter or
+                                         highlight text.
+                                       By providing this param, .NET Framework regular expression
+                                         engine is used instead.
+
+    -o|--comparison-option <OPTION>    Comparison options used for -l, -S and -H params. One of
+                                         following: CurrentCulture, CurrentCultureIgnoreCase,
+                                           InvariantCulture, InvariantCultureIgnoreCase
+                                         See .NET docs for StringComparison enum for details
+                                         By default, InvariantCultureIgnoreCase is used
+                                         Ignored, when -R|--regex is used
+
+    -a|--all                           By default, multiple -S|--show and -H|--hide patterns are
+                                         combined using OR operator. Provides -a param to use AND
+                                         operator.
+
+NOTES
+    * When reading from file, each tab character is replaced by 4 (four) spaces;
+    * PARAMS and files may be mixed in any order;
+    * When several files are followed, each file is output in different color;
+    * Each matched token is output in different color;
+    * Processing progress is shown in window title and in task bar;
+    * Press Ctrl+C to end monitoring.

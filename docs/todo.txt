@@ -1,0 +1,7 @@
+ 1.[imp] grep -B -A -C
+ 2.[imp] truncate mode – begin, end, middle, auto
+ 3.[imp] shows only filename
+ 4.[imp] Search only files modified between X and Y
+ 5.[imp] Filter only in specific columns (from X to Y) (regex?)
+ 6.[imp] supports pipe operator
+ 7.[imp] Sort lines in monitoring mode. Sort with delay – each second get pending lines older than one second, sort them, and print
