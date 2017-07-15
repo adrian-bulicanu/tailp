@@ -1,3 +1,5 @@
+-. [issue] some times the file is monitored twice
+
  1.[imp] grep -B -A -C
  2.[imp] truncate mode – begin, end, middle, auto
  3.[imp] shows only filename

@@ -24,11 +24,11 @@ DETAILED REFERENCE
 
     <file(s)>:
         One or more files. Masks * and ? are allowed.
-        Supported archives: ZIP, RAR (RAR5 not supported), 7z.
+        Supported archives: ZIP, RAR, 7z.
+          * RAR5 not supported
+          * SOLID RAR archives not supported
         Examples:
-          c:\*.txt                All text files in c:\.
-                                    If -r|--recursive param is used, all subdirectories are
-                                    searched.
+          c:\*.txt                All text files in c:\, including subdirectories
           c:\1.rar                All files in archive 1.rar.
           c:\1.rar\*.txt          All text files in archive 1.rar. Recursion is always used.
           c:\1.rar\2\dummy.txt    The file dummy.txt in folder 2 of archive 1.rar.
@@ -37,7 +37,7 @@ PARAMS / GENERIC
     -h|--help                          Shows this information.
 
 PARAMS / FILES
-    -r|--recursive                     Search files in subdirectories.
+   -nr|--non-recursive                 Search files in current directory only.
                                          Applicable only when * or ? mask are used.
 
     -c|--location <LOCATION>           Starts to read file from specified LOCATION;

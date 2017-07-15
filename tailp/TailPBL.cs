@@ -31,7 +31,7 @@ namespace TailP
             AllFilters = false;
             Regex = false;
             Follow = false;
-            Recursive = false;
+            Recursive = true;
             PrintLock = new object();
 
             FilesMonitor.Created += Created;
@@ -250,9 +250,9 @@ namespace TailP
                     case "--verbose":
                         ShowFile = true;
                         break;
-                    case "-r":
-                    case "--recursive":
-                        Recursive = true;
+                    case "-nr":
+                    case "--non-recursive":
+                        Recursive = false;
                         break;
                     case "-l":
                     case "--logical-lines":

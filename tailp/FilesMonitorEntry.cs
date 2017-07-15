@@ -59,6 +59,11 @@ namespace TailP
                 FileType = IsWildcard() ? FileTypes.Wildcard : FileTypes.Regular;
             }
             Recursive = recursive;
+
+            if (string.IsNullOrEmpty(Folder.Trim()))
+            {
+                Folder = ".";
+            }
         }
 
         private void ForceProcessRegular()
