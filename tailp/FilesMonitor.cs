@@ -29,9 +29,9 @@ namespace TailP
             entries.ForEach(x => x.ForceProcess());
         }
 
-        public static void Add(string path, bool follow)
+        public static void Add(string path, bool follow, TailPBL bl)
         {
-            var entry = new FilesMonitorEntry(path, Recursive);
+            var entry = new FilesMonitorEntry(path, Recursive, bl);
 
             var added = false;
             lock (_monitorEntriesLock)

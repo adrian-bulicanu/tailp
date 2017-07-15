@@ -472,7 +472,7 @@ namespace TailP
 
         private void AddFile(string pathMask)
         {
-            FilesMonitor.Add(pathMask, Follow);
+            FilesMonitor.Add(pathMask, Follow, this);
 
             var status = string.Format("Added {0}", pathMask);
             UpdateStatus(status);

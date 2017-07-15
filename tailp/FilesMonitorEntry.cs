@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace TailP
@@ -41,8 +42,9 @@ namespace TailP
 
         private object _watcherLock = new object();
         private FileSystemWatcher _watcher = null;
+        private TailPBL _bl;
 
-        public FilesMonitorEntry(string path, bool recursive)
+        public FilesMonitorEntry(string path, bool recursive, TailPBL bl)
         {
             string archive;
             string file;
@@ -64,11 +66,82 @@ namespace TailP
             {
                 Folder = ".";
             }
+
+            _bl = bl;
         }
 
         private void ForceProcessRegular()
         {
             InternalCreatedOrChanged(this, Path.Combine(Folder, Mask));
+        }
+
+        private bool IsExceptionIgnored(Exception ex)
+        {
+            return ex is UnauthorizedAccessException ||
+                   ex is PathTooLongException ||
+                   ex is System.Security.SecurityException;
+        }
+
+        private HashSet<string> _invalidPathes = new HashSet<string>();
+        private object _invalidPathesLock = new object();
+        private void PrintErrorOnlyFirstTime(string path, string error)
+        {
+            bool isNewError;
+            lock(_invalidPathesLock)
+            {
+                isNewError = _invalidPathes.Add(path);
+            }
+            if (isNewError)
+            {
+                _bl.NewLineCallback(TailPBL.GetErrorLine(error), 0);
+            }
+        }
+
+        // the same as Directory.EnumerateFiles, but ignores security errors
+        // inspired by https://stackoverflow.com/questions/5098011/directory-enumeratefiles-unauthorizedaccessexception
+        private IEnumerable<string> DirectoryEnumerateFiles(string path, string searchPattern, SearchOption searchOption)
+        {
+            var foundFiles = new List<string>();
+
+            if (searchOption == SearchOption.AllDirectories)
+            {
+                try
+                {
+                    Directory.EnumerateDirectories(path)
+                        .ToList()
+                        .ForEach(x => foundFiles.AddRange(
+                            DirectoryEnumerateFiles(x, searchPattern, searchOption)));
+                }
+                catch (Exception ex)
+                {
+                    if (IsExceptionIgnored(ex))
+                    {
+                        PrintErrorOnlyFirstTime(path, ex.Message);
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
+            }
+
+            try
+            {
+                foundFiles.AddRange(Directory.EnumerateFiles(path, searchPattern));
+            }
+            catch (Exception ex)
+            {
+                if (IsExceptionIgnored(ex))
+                {
+                    PrintErrorOnlyFirstTime(path, ex.Message);
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return foundFiles;
         }
 
         private void ForceProcessWildcard()
@@ -79,7 +152,7 @@ namespace TailP
                 actualFiles.UnionWith(Files);
             }
 
-            foreach (var f in Directory.EnumerateFiles(Folder, Mask,
+            foreach (var f in DirectoryEnumerateFiles(Folder, Mask,
                 Recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly))
             {
                 actualFiles.Remove(f);
