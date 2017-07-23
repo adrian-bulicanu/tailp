@@ -1,3 +1,5 @@
+[![Build status](https://ci.appveyor.com/api/projects/status/y1m45wj4wgjaa6wn?svg=true)](https://ci.appveyor.com/project/adrian-bulicanu/tailp)
+
 # tailp
 
 tailp (tail+) - Outputs, filters and highlights text from file(s) on disk, network and archives.
