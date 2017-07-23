@@ -1,2 +1,9 @@
+platform: Any CPU
+configuration: Release
+
 before_build:
   - nuget restore
+
+artifacts:
+  - path: tailp\bin\$(configuration)\tailp.exe
+    name: tailp
