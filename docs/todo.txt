@@ -1,9 +1,0 @@
-* [bug] some times the file is monitored twice
-* [imp] grep -B -A -C
-* [imp] exclude files by mask
-* [imp] truncate mode – begin, end, middle, auto
-* [imp] shows only filename
-* [imp] Search only files modified between X and Y
-* [imp] Filter only in specific columns (from X to Y) (regex?)
-* [imp] supports pipe operator
-* [imp] Sort lines in monitoring mode. Sort with delay – each second get pending lines older than one second, sort them, and print
