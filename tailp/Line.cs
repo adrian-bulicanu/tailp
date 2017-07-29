@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace TailP
@@ -10,6 +11,7 @@ namespace TailP
         private readonly string TAB_REPLACER = "    ";
         private readonly string LINE_NUMBER_FORMAT = "{0:D8} ";
         private readonly string LINE_NUMBER_PADDING = "         ";
+        private readonly string LINE_NUMBER_UNKNOWN = " unknown ";
 
         // NOTE: unit tests to be edited if markers length is changed!
         public readonly string TRUNCATED_MARKER_END = ">";
@@ -95,7 +97,7 @@ namespace TailP
         /// Analog to string.Substring
         /// </summary>
         /// <param name="start">index, from 0</param>
-        /// <param name="length">max(lenght, available) chars will be returned</param>
+        /// <param name="length">max(length, available) chars will be returned</param>
         /// <returns></returns>
         /// <exception cref="ArgumentOutOfRangeException">if start is an invalid value</exception>
         public Line Substring(int start, int length = int.MaxValue)
@@ -308,6 +310,17 @@ namespace TailP
             }
         }
 
+        public void SetLineNumberToUnknown()
+        {
+            ForEach(x =>
+            {
+                if (x.Type == Types.LineNumber && x.Text != LINE_NUMBER_PADDING)
+                {
+                    x.Text = LINE_NUMBER_UNKNOWN;
+                }
+            });
+        }
+
         public void AddLineNumber()
         {
             Insert(0, new Token(Types.LineNumber,
@@ -326,6 +339,18 @@ namespace TailP
 
             // after middle truncate, length may still remains too large
             TruncateFromEnd(resultStringLength, true);
+        }
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder();
+
+            ForEach(x =>
+            {
+                sb.Append(x);
+            });
+
+            return sb.ToString();
         }
     }
 }

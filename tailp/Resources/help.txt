@@ -4,20 +4,16 @@ DESCRIPTION
 
 QUICK REFERENCE (EXAMPLES)
     1. Print last 10 lines from file and follow changes. Truncate long lines:
-
-       tailp c:\windows\WindowsUpdate.log -n 10 -f -t
+           tailp c:\windows\WindowsUpdate.log -n 10 -f -t
 
     2. Same as (1), but shows only lines containing "COMAPI" or "START", follow all *.log files:
-
-       tailp -t c:\windows\*.log -n 10 -f -S COMAPI -S START
+           tailp -t c:\windows\*.log -n 10 -f -S COMAPI -S START
 
     3. Same as (2), and highlight ClientId by using regex:
-
-       tailp -t c:\windows\*.log -n 10 -f -S COMAPI -S START -R -L "ClientId = .*"
+           tailp -t c:\windows\*.log -n 10 -f -S COMAPI -S START -R -L "ClientId = .*"
 
     4. Shows AssemblyInfo.cs files in archive, that does NOT contains * char in AssemblyVersion:
-
-       tailp e:\3.rar\AssemblyInfo.cs* -S AssemblyVersion -H *
+           tailp e:\3.rar\AssemblyInfo.cs* -S AssemblyVersion -H *
 
 DETAILED REFERENCE
     tailp [PARAMS] <file(s)> [PARAMS] <file(s)> ...
@@ -74,6 +70,14 @@ PARAMS / OUTPUT
                                            truncated.
                                          Truncated text is replaced by ">" at the end or by "<...>"
                                            in the middle.
+
+    -A|--after-context <NUM>           Print NUM lines of trailing context after matching lines.
+                                         Places a line containing a group separator (--) before
+                                         each match.
+    -B|--before-context <NUM>          Print NUM lines of leading context before matching lines.
+                                         Places a line containing a group separator (--) before
+                                         each match.
+    -C|--context <NUM>                 The same as -A <NUM> -B <NUM>
 
 PARAMS / MATCHING											  
     -l|--logical-lines <MARKER>        Treats several text lines as a singe logical line (message),

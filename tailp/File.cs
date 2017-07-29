@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace TailP
 {
-    public sealed class File: IDisposable
+    public sealed class File : IDisposable
     {
         private class FileInfoCache // FileInfo accesses file on each method call
         {
@@ -37,10 +37,9 @@ namespace TailP
         private readonly int PAGE_SIZE = 1024 * 1024; // 1MiB
 
         private LogicalLine _logicalLine = new LogicalLine();
-        // TODO: set LogicalLinesHistory limit to -C from command prompt
-        private LogicalLinesHistory _logicalLinesHistory = new LogicalLinesHistory(1);
+        private LogicalLinesHistory _logicalLinesHistory;
         private int _lineNumber = 0;
-        private int _lastPrintedLineNumer = -1;
+        private bool _isFilenameNeeded = true;
         private string _file = string.Empty;
         private object _minorLock = new object();
         private long _lastPos = 0;
@@ -52,12 +51,15 @@ namespace TailP
         private FileTypes _fileType = FileTypes.Regular;
         private NumLinesStart _startFromType = NumLinesStart.begin;
         private int _startFromNum = 0;
+        private int _contextBefore = -1;
+        private int _contextAfter = -1;
+        private int _afterCounter = -1;
 
         public FileTypes FileType
         {
             get
             {
-                lock(_minorLock)
+                lock (_minorLock)
                 {
                     return _fileType;
                 }
@@ -67,7 +69,7 @@ namespace TailP
         {
             get
             {
-                lock(_minorLock)
+                lock (_minorLock)
                 {
                     return _lastPos;
                 }
@@ -95,7 +97,7 @@ namespace TailP
         {
             get
             {
-                lock(_minorLock)
+                lock (_minorLock)
                 {
                     return _fileInfo == null ? DateTime.MinValue : _fileInfo.CreationTime;
                 }
@@ -123,7 +125,8 @@ namespace TailP
         }
 
         public File(string file, TailPBL bl, int fileIndex,
-                    NumLinesStart startFromType, int startFromNum)
+                    NumLinesStart startFromType, int startFromNum,
+                    int contextAfter, int contextBefore)
         {
             if (string.IsNullOrEmpty(file)) throw new ArgumentException("file");
             if (bl == null) throw new ArgumentNullException("bl");
@@ -133,6 +136,9 @@ namespace TailP
             _fileIndex = fileIndex;
             _startFromType = startFromType;
             _startFromNum = startFromNum;
+            _contextBefore = contextBefore;
+            _contextAfter = contextAfter;
+            _logicalLinesHistory = new LogicalLinesHistory(Math.Max(1, contextBefore));
 
             string archive;
             string finalFile;
@@ -156,7 +162,7 @@ namespace TailP
             {
                 try
                 {
-                    switch(_fileType)
+                    switch (_fileType)
                     {
                         case FileTypes.Regular:
                             _fileInfo = new FileInfoCache(new FileInfo(_file));
@@ -240,6 +246,14 @@ namespace TailP
             }
         }
 
+        private int ContextLines
+        {
+            get
+            {
+                return Math.Max(0, _contextBefore) + Math.Max(0, _contextAfter);
+            }
+        }
+
         private bool _lastLinesProcessed = false;
         private void FindLastLinesInStream(Stream stream)
         {
@@ -251,7 +265,7 @@ namespace TailP
 
             if (_startFromNum != 0)
             {
-                var logicalLinesHistory = new LogicalLinesHistory(_startFromNum);
+                var logicalLinesHistory = new LogicalLinesHistory(_startFromNum * (ContextLines + 1));
                 if (stream.CanSeek)
                 {
                     if (!ProcessStreamInPages(stream, logicalLinesHistory))
@@ -270,7 +284,9 @@ namespace TailP
                 FlushLogicalLine(logicalLinesHistory);
                 while (logicalLinesHistory.Any())
                 {
-                    PrintLogicalLine(logicalLinesHistory.Dequeue());
+                    var forPrinting = new LogicalLinesHistory();
+                    PrepareLogicalLineForPrinting(logicalLinesHistory.Dequeue(), forPrinting);
+                    PrintLogicalLines(forPrinting);
                 }
             }
 
@@ -305,22 +321,34 @@ namespace TailP
 
         private bool ProcessStreamInPages(Stream stream, LogicalLinesHistory logicalLines)
         {
+            // Optimization used:
+            //       read from end in pages by XXX bytes to a memory stream
+            //       and stops to read if _startFromNum lines found
+            //
+            //       Will not works, if line length is greater than PAGE_SIZE
+
             if (FileSize <= PAGE_SIZE)
             {
                 return false;
             }
 
-            // Optimization:
-            //       read from end in pages by XXX bytes to a memory stream
-            //       and stops to read if _startFromNum lines found
-            //
-            //       Will not works, if line length is greater than PAGE_SIZE
+            // TODO: To use optimization for before context
+            // Explanation:
+            //       it seems quite complicate to store the before context,
+            //       when file is reading in pages from end to begin.
+            //       for the moment, disable the optimization when before context
+            //       is needed
+            if (IsContextBeforeUsed)
+            {
+                return false;
+            }
+
             var encoding = DetectEncoding(stream);
-            var foundLines = new LogicalLinesHistory(_startFromNum);
+            var foundLines = new LogicalLinesHistory(_startFromNum * (ContextLines + 1));
             var from = FileSize;
 
             while (from != 0 &&
-                   foundLines.Count != _startFromNum)
+                   foundLines.Count != _startFromNum * (ContextLines + 1))
             {
                 var buf = new byte[PAGE_SIZE];
                 var pageLines = new LogicalLinesHistory(foundLines.Limit);
@@ -377,6 +405,11 @@ namespace TailP
             }
 
             logicalLines.ReplaceBy(foundLines);
+            // because lines was searched in pages, line numbers are irrelevant
+            foreach (var logicalLine in logicalLines)
+            {
+                logicalLine.SetLinesNumberToUnknown();
+            }
             LastPos = FileSize;
 
             return true;
@@ -476,7 +509,7 @@ namespace TailP
         {
             LastPos = GetLastLocation();
             _lineNumber = 0;
-            _lastPrintedLineNumer = -1;
+            _isFilenameNeeded = true;
         }
 
         private object _errorShownLock = new object();
@@ -565,24 +598,34 @@ namespace TailP
             }
 
             _logicalLine.IsVisible = !ShouldBeHided() && ShouldBeShown();
-
-            if (_logicalLine.IsVisible)
+            if (_logicalLine.IsVisible || _afterCounter > 0)
             {
                 // skip first _startFromNum lines
                 if (_startFromType == NumLinesStart.begin &&
                     _startFromNum > 0)
                 {
-                    --_startFromNum;
+                    if (_logicalLine.IsVisible)
+                    {
+                        --_startFromNum;
+                    }
                 }
                 else
                 {
+                    var forPrinting = new LogicalLinesHistory();
+                    PrepareLogicalLineForPrinting(_logicalLine, forPrinting);
+
                     if (logicalLinesHistory == null)
                     {
-                        PrintLogicalLine(_logicalLine);
+                        PrintLogicalLines(forPrinting);
                     }
                     else
                     {
-                        logicalLinesHistory.Enqueue(_logicalLine);
+                        logicalLinesHistory.Enqueue(forPrinting);
+                    }
+
+                    if (_logicalLine.IsVisible)
+                    {
+                        _afterCounter = _contextAfter;
                     }
                 }
             }
@@ -591,14 +634,77 @@ namespace TailP
             _logicalLine = new LogicalLine();
         }
 
-        private void PrintLogicalLine(LogicalLine logicalLine)
+        private void PrintFileName()
+        {
+            _bl.PrintFileName(FileName, _isFilenameNeeded);
+            _isFilenameNeeded = false;
+        }
+
+        private bool IsContextBeforeUsed
+        {
+            get
+            {
+                return _contextBefore > 0;
+            }
+        }
+
+        private bool IsContextAfterUsed
+        {
+            get
+            {
+                return _contextAfter > 0;
+            }
+        }
+
+        private bool IsContextUsed
+        {
+            get
+            {
+                return IsContextBeforeUsed || IsContextAfterUsed;
+            }
+        }
+
+        private int _lastPrintedLine = 0;
+        private void PrintLogicalLines(LogicalLinesHistory logicalLines)
         {
             lock (_bl.PrintLock)
             {
-                _bl.PrintFileName(FileName, _lastPrintedLineNumer == -1);
-                _bl.PrintLogicalLine(logicalLine, _fileIndex);
+                PrintFileName();
+
+                while (logicalLines.Any())
+                {
+                    var logicalLine = logicalLines.Dequeue();
+
+                    if (!logicalLine.IsPrinted)
+                    {
+                        if (IsContextUsed &&
+                            Math.Abs(logicalLine.LineNumber - _lastPrintedLine) > 1)
+                        {
+                            _bl.PrintLogicalLine(TailPBL.GetContextDelimiter(), _fileIndex);
+                        }
+
+                        _bl.PrintLogicalLine(logicalLine, _fileIndex);
+                        _lastPrintedLine = logicalLine.LineNumber;
+                    }
+                }
             }
-            _lastPrintedLineNumer = logicalLine.Max(x => x.LineNumber);
+        }
+
+        private void PrepareLogicalLineForPrinting(LogicalLine logicalLine, LogicalLinesHistory prepared)
+        {
+            if (_contextBefore >= 0 && _logicalLinesHistory.Any() &&
+                _logicalLine.IsVisible)
+            {
+                prepared.Enqueue(_logicalLinesHistory);
+                _logicalLinesHistory.Clear();
+            }
+
+            prepared.Enqueue(logicalLine);
+
+            if (_afterCounter > 0)
+            {
+                --_afterCounter;
+            }
         }
 
         private void TruncateIfApplicable(Line line)

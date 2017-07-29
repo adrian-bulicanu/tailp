@@ -8,15 +8,15 @@ using System.Threading;
 
 namespace TailP
 {
-    public sealed class TailPBL: IDisposable
+    public sealed class TailPBL : IDisposable
     {
         public delegate void NewLineFunc(Line line, int fileIndex);
 
-        public TailPBL(NewLineFunc func)
+        public TailPBL(NewLineFunc function)
         {
-            if (func == null) throw new ArgumentNullException("func");
+            if (function == null) throw new ArgumentNullException("function");
 
-            NewLineCallback = func;
+            NewLineCallback = function;
             FiltersShow = new List<string>();
             FiltersHide = new List<string>();
             FiltersHighlight = new List<string>();
@@ -32,6 +32,8 @@ namespace TailP
             Regex = false;
             Follow = false;
             Recursive = true;
+            ContextBefore = -1;
+            ContextAfter = -1;
             PrintLock = new object();
 
             FilesMonitor.Created += Created;
@@ -40,11 +42,12 @@ namespace TailP
         }
 
         public readonly int MAX_WIDTH = Math.Max(1, Console.BufferWidth);
-        private readonly TimeSpan FORCE_DETECT_PERIOD = TimeSpan.FromMilliseconds(500);
-        private readonly int MAX_PUSH_PROCESS_COUNT = 1000;
-        private readonly string FILENAME_PRINT_FORMAT = @"==> {0} <==";
-        private readonly string HELP_VERSION_HEADER = @"VERSION";
-        private readonly string HELP_VERSION_FORMAT = @"    {0} {1} / {2}";
+        private static readonly TimeSpan FORCE_DETECT_PERIOD = TimeSpan.FromMilliseconds(500);
+        private static readonly int MAX_PUSH_PROCESS_COUNT = 1000;
+        private static readonly string FILENAME_PRINT_FORMAT = @"==> {0} <==";
+        private static readonly string HELP_VERSION_HEADER = @"VERSION";
+        private static readonly string HELP_VERSION_FORMAT = @"    {0} {1} / {2}";
+        private static readonly string CONTEXT_LINE_DELIMITER = @"--";
 
         private AutoResetEvent _processEvent = new AutoResetEvent(false);
         private ConcurrentQueue<File> _pollFilesToBeProcess = new ConcurrentQueue<File>();
@@ -68,6 +71,8 @@ namespace TailP
         public bool Follow { get; private set; }
         public NumLinesStart LinesStartFrom { get; private set; }
         public int LinesStartNumber { get; private set; }
+        public int ContextAfter { get; private set; }
+        public int ContextBefore { get; private set; }
 
         private object _showFileLocker = new object();
         private bool? _showFile = null;
@@ -295,6 +300,21 @@ namespace TailP
                     case "--truncate":
                         Truncate = true;
                         break;
+                    case "-A":
+                    case "--after-context":
+                        AdjustAndCheckIndex(ref i, lastIndex, arg);
+                        ContextAfter = ParseAndGetContextNumber(args[i]);
+                        break;
+                    case "-B":
+                    case "--before-context":
+                        AdjustAndCheckIndex(ref i, lastIndex, arg);
+                        ContextBefore = ParseAndGetContextNumber(args[i]);
+                        break;
+                    case "-C":
+                    case "--context":
+                        AdjustAndCheckIndex(ref i, lastIndex, arg);
+                        ContextAfter = ContextBefore = ParseAndGetContextNumber(args[i]);
+                        break;
                     default:
                         files.Add(args[i]);
                         break;
@@ -423,7 +443,8 @@ namespace TailP
                 if (!_files.TryGetValue(e.File, out file))
                 {
                     file = new File(e.File, this, ++_lastFileIndex,
-                                    LinesStartFrom, LinesStartNumber);
+                                    LinesStartFrom, LinesStartNumber,
+                                    ContextAfter, ContextBefore);
                     _files.TryAdd(e.File, file);
 
                     if (!IsShowFileDefined && _files.Count > 1)
@@ -504,13 +525,31 @@ namespace TailP
             }
         }
 
+        private int ParseAndGetContextNumber(string context)
+        {
+            var num = context.Trim().ToLower();
+
+            if (num.Length > 0)
+            {
+                int number;
+                if (int.TryParse(num, out number) &&
+                    number > 0)
+                {
+                    return number;
+                }
+            }
+
+            throw new TailPExceptionArgs(
+                string.Format("invalid context number '{0}'", num));
+        }
+
         private void ParseNumLines(string numLines)
         {
             var num = numLines.Trim().ToLower();
             if (num.Length < 1)
             {
                 throw new TailPExceptionArgs(
-                    string.Format("invalid num lines '{0}'", num));
+                    string.Format("invalid number lines '{0}'", num));
             }
 
             LinesStartFrom = num[0] == '+' ? NumLinesStart.begin : NumLinesStart.end;
@@ -523,7 +562,7 @@ namespace TailP
             else
             {
                 throw new TailPExceptionArgs(
-                    string.Format("invalid num lines '{0}'", num));
+                    string.Format("invalid number lines '{0}'", num));
             }
         }
 
@@ -545,21 +584,29 @@ namespace TailP
         {
             message = DateTime.Now + " " + message;
             return new Line
-                    {
-                        new Token(Types.NewLine, string.Empty),
-                        new Token(Types.Error, message),
-                        new Token(Types.NewLine, string.Empty)
-                    };
+            {
+                new Token(Types.NewLine, string.Empty),
+                new Token(Types.Error, message),
+                new Token(Types.NewLine, string.Empty)
+            };
+        }
+
+        public static LogicalLine GetContextDelimiter()
+        {
+            return new LogicalLine
+            {
+                new Line
+                {
+                    new Token(Types.LineNumber, CONTEXT_LINE_DELIMITER)
+                }
+            };
         }
 
         public void PrintLogicalLine(LogicalLine logicalLine, int fileIndex)
         {
             if (!logicalLine.IsPrinted)
             {
-                foreach (var ln in logicalLine)
-                {
-                    NewLineCallback(ln, fileIndex);
-                }
+                logicalLine.ForEach(x => NewLineCallback(x, fileIndex));
                 logicalLine.IsPrinted = true;
             }
         }

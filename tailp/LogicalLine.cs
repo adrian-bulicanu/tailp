@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace TailP
 {
@@ -13,6 +14,21 @@ namespace TailP
             get
             {
                 return !this.Any();
+            }
+        }
+
+        public int LineNumber
+        {
+            get
+            {
+                if (IsEmpty)
+                {
+                    return 0;
+                }
+                else
+                {
+                    return this.First().LineNumber;
+                }
             }
         }
 
@@ -64,6 +80,26 @@ namespace TailP
             {
                 return this.Any(x => x.IsHided);
             }
+        }
+
+        public void SetLinesNumberToUnknown()
+        {
+            ForEach(x => x.SetLineNumberToUnknown());
+        }
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder();
+
+            ForEach(x =>
+            {
+                sb.Append(x);
+                sb.AppendLine();
+            });
+
+            sb.AppendFormat(@"visible={0}, printed={1}", IsVisible, IsPrinted);
+
+            return sb.ToString();
         }
     }
 }

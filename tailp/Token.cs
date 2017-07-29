@@ -5,7 +5,7 @@ namespace TailP
     public class Token
     {
         public Types Type { get; private set; }
-        public string Text { get; private set; }
+        public string Text { get; set; }
         public int ColorIndex { get; private set; }
 
         public Token(Types type, string text)
@@ -50,6 +50,11 @@ namespace TailP
         public override int GetHashCode()
         {
             return Type.GetHashCode() ^ Text.GetHashCode() ^ ColorIndex.GetHashCode();
+        }
+
+        public override string ToString()
+        {
+            return Text;
         }
     }
 }

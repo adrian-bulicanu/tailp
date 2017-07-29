@@ -17,6 +17,11 @@ namespace TailP
             Limit = limit;
         }
 
+        public LogicalLinesHistory() : base()
+        {
+            Limit = int.MaxValue;
+        }
+
         public new void Enqueue(LogicalLine item)
         {
             while (Count >= Limit)
