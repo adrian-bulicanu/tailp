@@ -79,7 +79,8 @@ namespace TailP
         {
             return ex is UnauthorizedAccessException ||
                    ex is PathTooLongException ||
-                   ex is System.Security.SecurityException;
+                   ex is System.Security.SecurityException ||
+                   ex is IOException;
         }
 
         private HashSet<string> _invalidPathes = new HashSet<string>();
