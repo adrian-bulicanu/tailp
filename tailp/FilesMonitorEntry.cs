@@ -1,4 +1,6 @@
-﻿using System;
+﻿// This is an open source non-commercial project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -213,11 +215,19 @@ namespace TailP
 
             if (added)
             {
-                Created(this, new FilesMonitorEventArgs(sender, file));
+                var handler = Created;
+                if (handler != null)
+                {
+                    handler(this, new FilesMonitorEventArgs(sender, file));
+                }
             }
             else
             {
-                Changed(this, new FilesMonitorEventArgs(sender, file));
+                var handler = Changed;
+                if (handler != null)
+                {
+                    handler(this, new FilesMonitorEventArgs(sender, file));
+                }
             }
         }
 
@@ -231,7 +241,11 @@ namespace TailP
 
             if (removed)
             {
-                Deleted(this, new FilesMonitorEventArgs(sender, file));
+                var handler = Deleted;
+                if (handler != null)
+                {
+                    handler(this, new FilesMonitorEventArgs(sender, file));
+                }
             }
         }
 
