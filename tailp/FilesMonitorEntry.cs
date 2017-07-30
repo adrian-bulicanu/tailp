@@ -34,7 +34,8 @@ namespace TailP
         public bool Recursive { get; private set; }
         public FileTypes FileType { get; private set; }
         private object _filesLock = new object();
-        public HashSet<string> Files = new HashSet<string>();
+        public HashSet<string> Files =
+            new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
 
         private readonly TimeSpan WAIT_ON_ERROR = TimeSpan.FromSeconds(1);
 
@@ -85,7 +86,8 @@ namespace TailP
                    ex is IOException;
         }
 
-        private HashSet<string> _invalidPathes = new HashSet<string>();
+        private HashSet<string> _invalidPathes =
+            new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
         private object _invalidPathesLock = new object();
         private void PrintErrorOnlyFirstTime(string path, string error)
         {
@@ -149,7 +151,7 @@ namespace TailP
 
         private void ForceProcessWildcard()
         {
-            var actualFiles = new HashSet<string>();
+            var actualFiles = new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
             lock (_filesLock)
             {
                 actualFiles.UnionWith(Files);
@@ -207,6 +209,11 @@ namespace TailP
 
         private void InternalCreatedOrChanged(object sender, string file)
         {
+            if (!Utils.IsMatchMask(file, Mask))
+            {
+                return;
+            }
+
             var added = false;
             lock (_filesLock)
             {

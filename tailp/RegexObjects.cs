@@ -8,7 +8,8 @@ namespace TailP
 {
     public static class RegexObjects
     {
-        private static ConcurrentDictionary<string, Regex> _regexs = new ConcurrentDictionary<string, Regex>();
+        private static ConcurrentDictionary<string, Regex> _regexs =
+            new ConcurrentDictionary<string, Regex>();
         public static Regex GetRegexObject(string filter, Func<Regex> createRegex)
         {
             Regex result;

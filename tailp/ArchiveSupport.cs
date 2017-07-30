@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace TailP
 {
@@ -64,33 +63,6 @@ namespace TailP
             }
         }
 
-        private static bool IsMatchMask(string path, string mask)
-        {
-            if (mask == string.Empty)
-            {
-                return true;
-            }
-
-            var normalizedMask = mask.Replace('\\', '/');
-            var normalizedPath = path.Replace('\\', '/');
-
-            // regex is slow, tries string comparison first
-            if (normalizedMask.IndexOfAny(new char[] { '*', '?' }) == -1)
-            {
-                return normalizedPath.IndexOf(normalizedMask,
-                    StringComparison.CurrentCultureIgnoreCase) != -1;
-            }
-
-            var rg = RegexObjects.GetRegexObject(normalizedMask,
-                () => new Regex(normalizedMask
-                    .Replace(@".", @"[.]")
-                    .Replace(@"*", @".*")
-                    .Replace(@"?", @".")
-                    , RegexOptions.Compiled | RegexOptions.CultureInvariant));
-
-            return rg.IsMatch(normalizedPath);
-        }
-
         public class EntryInfo
         {
             public string Path { get; private set; }
@@ -142,7 +114,7 @@ namespace TailP
             {
                 return GetArchiveEntries(archive)
                     .Values
-                    .Where(x => IsMatchMask(x.Key, file))
+                    .Where(x => Utils.IsMatchMask(x.Key, file))
                     .Select(x => x.Key)
                     .ToList();
             }
@@ -177,10 +149,11 @@ namespace TailP
         }
 
         // TODO: to dispose after inactivity timeout
-        private static Dictionary<string, IArchive> _archives = new Dictionary<string, IArchive>();
+        private static Dictionary<string, IArchive> _archives =
+            new Dictionary<string, IArchive>(StringComparer.CurrentCultureIgnoreCase);
         // archive path / file path inside archive / entry
         private static Dictionary<string, Dictionary<string, IArchiveEntry>> _archivesEntries = 
-            new Dictionary<string, Dictionary<string, IArchiveEntry>>();
+            new Dictionary<string, Dictionary<string, IArchiveEntry>>(StringComparer.CurrentCultureIgnoreCase);
 
         private static IArchive GetArchive(string archive)
         {

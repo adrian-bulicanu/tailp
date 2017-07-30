@@ -55,7 +55,8 @@ namespace TailP
         private ConcurrentQueue<File> _pollFilesToBeProcess = new ConcurrentQueue<File>();
         private ConcurrentQueue<File> _pushFilesToBeProcess = new ConcurrentQueue<File>();
         // hashset<File> should be used here, but where is no way to get fast a element from hashset
-        private ConcurrentDictionary<string, File> _files = new ConcurrentDictionary<string, File>();
+        private ConcurrentDictionary<string, File> _files =
+            new ConcurrentDictionary<string, File>(StringComparer.CurrentCultureIgnoreCase);
         private int _lastFileIndex = 0;
         public object PrintLock { get; private set; }
         public NewLineFunc NewLineCallback { get; private set; }
@@ -342,6 +343,7 @@ namespace TailP
             }
 
             var count = FilesCount;
+            var firstTimeDetect = _firstTimeDetect;
 
             if (_firstTimeDetect)
             {
@@ -353,7 +355,7 @@ namespace TailP
             FilesMonitor.ForceProcess();
 
             var actualCount = FilesCount;
-            if (actualCount != count)
+            if (actualCount != count || firstTimeDetect)
             {
                 UpdateStatus(string.Format("Monitoring {0} files...", actualCount));
             }

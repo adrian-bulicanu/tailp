@@ -78,6 +78,7 @@
     <Compile Include="TaskbarProgress.cs" />
     <Compile Include="Token.cs" />
     <Compile Include="Types.cs" />
+    <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
