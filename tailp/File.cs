@@ -210,7 +210,7 @@ namespace TailP
 
                         stream = GetStream();
                         FindLastLinesInStream(stream);
-                        ProcessStreamFromLastPostToEnd(stream, null);
+                        ProcessStreamFromLastPosToEnd(stream, null);
                         CreateNoProcessTimer();
 
                         break; // no errors, exiting from while
@@ -275,12 +275,12 @@ namespace TailP
                         // optimization is not working, try without optimization
                         ResetCounters();
                         logicalLinesHistory.Clear();
-                        ProcessStreamFromLastPostToEnd(stream, logicalLinesHistory);
+                        ProcessStreamFromLastPosToEnd(stream, logicalLinesHistory);
                     }
                 }
                 else
                 {
-                    ProcessStreamFromLastPostToEnd(stream, logicalLinesHistory);
+                    ProcessStreamFromLastPosToEnd(stream, logicalLinesHistory);
                 }
 
                 FlushLogicalLine(logicalLinesHistory);
@@ -296,7 +296,7 @@ namespace TailP
             _lastLinesProcessed = true;
         }
 
-        private void ProcessStreamFromLastPostToEnd(Stream stream, LogicalLinesHistory logicalLines)
+        private void ProcessStreamFromLastPosToEnd(Stream stream, LogicalLinesHistory logicalLines)
         {
             using (var sr = new StreamReader(stream, Encoding.Default, true))
             {
@@ -308,7 +308,13 @@ namespace TailP
                     s = ReadLine(sr);
                 }
 
-                LastPos = FileSize;
+                // for archives, LastPos remains 0, so update-it to FileSize
+                // NOTE: do not set LastPos = FileSize for files, cause FileSize is just
+                //       a cached value, and do not reflect actual file size!
+                if (!sr.BaseStream.CanSeek)
+                {
+                    LastPos = FileSize;
+                }
             }
         }
 
@@ -447,7 +453,10 @@ namespace TailP
         private string ReadLine(StreamReader sr)
         {
             var s = sr.ReadLine();
-            UpdateLastPos(sr);
+            if (s != null)
+            {
+                UpdateLastPos(sr);
+            }
             return s;
         }
 
@@ -503,6 +512,7 @@ namespace TailP
         {
             if (sr.BaseStream.CanSeek)
             {
+                sr.DiscardBufferedData();
                 sr.BaseStream.Seek(LastPos, SeekOrigin.Begin);
             }
         }
