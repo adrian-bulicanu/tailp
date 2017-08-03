@@ -45,7 +45,7 @@ namespace TailP
 
         public readonly int MAX_WIDTH = Math.Max(1, Console.BufferWidth);
         private static readonly TimeSpan FORCE_DETECT_PERIOD = TimeSpan.FromMilliseconds(500);
-        private static readonly int MAX_PUSH_PROCESS_COUNT = 1000;
+        private static readonly int MAX_PUSH_PROCESS_COUNT = 10;
         private static readonly string FILENAME_PRINT_FORMAT = @"==> {0} <==";
         private static readonly string HELP_VERSION_HEADER = @"VERSION";
         private static readonly string HELP_VERSION_FORMAT = @"    {0} {1} / {2}";
@@ -129,7 +129,7 @@ namespace TailP
             get
             {
                 File result;
-                lock(_lastFileLock)
+                lock (_lastFileLock)
                 {
                     result = _lastFile;
                 }
@@ -137,7 +137,7 @@ namespace TailP
             }
             set
             {
-                lock(_lastFileLock)
+                lock (_lastFileLock)
                 {
                     _lastFile = value;
                 }
@@ -147,7 +147,7 @@ namespace TailP
         {
             get
             {
-                lock(_lastFileLock)
+                lock (_lastFileLock)
                 {
                     return _lastFile == null ? 0 : _lastFile.LastPos;
                 }
@@ -166,7 +166,7 @@ namespace TailP
         {
             get
             {
-                lock(_lastFileLock)
+                lock (_lastFileLock)
                 {
                     return _lastFile == null ? 0 : _lastFile.FileSize;
                 }
@@ -183,7 +183,7 @@ namespace TailP
         {
             get
             {
-                lock(_lastFileLock)
+                lock (_lastFileLock)
                 {
                     return _lastFile == null ? string.Empty : _lastFile.FileName;
                 }
@@ -278,17 +278,17 @@ namespace TailP
                     case "-S":
                     case "--show":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
-                            FiltersShow.Add(args[i]);
+                        FiltersShow.Add(args[i]);
                         break;
                     case "-H":
                     case "--hide":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
-                            FiltersHide.Add(args[i]);
+                        FiltersHide.Add(args[i]);
                         break;
                     case "-L":
                     case "--highlight":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
-                            FiltersHighlight.Add(args[i]);
+                        FiltersHighlight.Add(args[i]);
                         break;
                     case "-o":
                     case "--comparison-option":
@@ -365,7 +365,7 @@ namespace TailP
 
         public void StartProcess()
         {
-            Tick(true);
+            Tick();
 
             StartLocation = 0; // monitor new files from beginning
 
@@ -374,42 +374,24 @@ namespace TailP
                 new Thread(() =>
                 {
                     Thread.CurrentThread.IsBackground = true;
-                    var signalCounter = 0;
                     while (true)
                     {
-                        if (_processEvent.WaitOne(FORCE_DETECT_PERIOD))
-                        {
-                            ++signalCounter;
-                        }
-                        else
-                        {
-                            signalCounter = 0;
-                        }
-
-                        if (signalCounter > MAX_PUSH_PROCESS_COUNT)
-                        {
-                            signalCounter = 0;
-                        }
-
-                        // skip force detect for push events
-                        Tick(signalCounter == 0);
+                        _processEvent.WaitOne(FORCE_DETECT_PERIOD);
+                        Tick();
                     }
                 }).Start();
             }
             else
             {
-                // process archived files if any
+                // force to process archived files if any
                 _lastForceDetect = DateTime.MinValue;
-                Tick(true);
+                Tick();
             }
         }
 
-        private void Tick(bool forceDetect)
+        private void Tick()
         {
-            if (forceDetect)
-            {
-                ForceDetect();
-            }
+            ForceDetect();
 
             // process files, giving priority to pushed one
             while (_pushFilesToBeProcess.Any() || _pollFilesToBeProcess.Any())
