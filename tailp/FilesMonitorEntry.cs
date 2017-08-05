@@ -33,8 +33,9 @@ namespace TailP
         public string Mask { get; private set; }
         public bool Recursive { get; private set; }
         public FileTypes FileType { get; private set; }
-        private object _filesLock = new object();
-        public HashSet<string> Files =
+
+        private readonly object _filesLock = new object();
+        private readonly HashSet<string> _files =
             new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
 
         private readonly TimeSpan WAIT_ON_ERROR = TimeSpan.FromSeconds(1);
@@ -43,9 +44,9 @@ namespace TailP
         public event FilesMonitorEntryHandler Deleted;
         public event FilesMonitorEntryHandler Changed;
 
-        private object _watcherLock = new object();
+        private readonly object _watcherLock = new object();
         private FileSystemWatcher _watcher = null;
-        private TailPBL _bl;
+        private readonly TailPBL _bl;
 
         public FilesMonitorEntry(string path, bool recursive, TailPBL bl)
         {
@@ -86,9 +87,9 @@ namespace TailP
                    ex is IOException;
         }
 
-        private HashSet<string> _invalidPathes =
+        private readonly HashSet<string> _invalidPathes =
             new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
-        private object _invalidPathesLock = new object();
+        private readonly object _invalidPathesLock = new object();
         private void PrintErrorOnlyFirstTime(string path, string error)
         {
             bool isNewError;
@@ -154,7 +155,7 @@ namespace TailP
             var actualFiles = new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
             lock (_filesLock)
             {
-                actualFiles.UnionWith(Files);
+                actualFiles.UnionWith(_files);
             }
 
             foreach (var f in DirectoryEnumerateFiles(Folder, Mask,
@@ -217,7 +218,7 @@ namespace TailP
             var added = false;
             lock (_filesLock)
             {
-                added = Files.Add(file);
+                added = _files.Add(file);
             }
 
             if (added)
@@ -243,7 +244,7 @@ namespace TailP
             var removed = false;
             lock (_filesLock)
             {
-                removed = Files.Remove(file);
+                removed = _files.Remove(file);
             }
 
             if (removed)

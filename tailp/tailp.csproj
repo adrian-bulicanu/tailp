@@ -24,6 +24,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <LangVersion>5</LangVersion>
     <Prefer32Bit>false</Prefer32Bit>
+    <CodeAnalysisRuleSet>tailp.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -36,6 +37,7 @@
     <Prefer32Bit>false</Prefer32Bit>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <LangVersion>5</LangVersion>
+    <CodeAnalysisRuleSet>tailp.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="SharpCompress, Version=0.17.1.0, Culture=neutral, PublicKeyToken=afb0a02973931d96, processorArchitecture=MSIL">
@@ -70,11 +72,11 @@
     </Compile>
     <Compile Include="RegexObjects.cs" />
     <Compile Include="StartLocationTypes.cs" />
+    <Compile Include="TailPArgsException.cs" />
     <Compile Include="TailPBL.cs" />
     <Compile Include="TailPException.cs" />
     <Compile Include="TailPArchiveException.cs" />
-    <Compile Include="TailPExceptionHelp.cs" />
-    <Compile Include="TailPExceptionArgs.cs" />
+    <Compile Include="TailPHelpException.cs" />
     <Compile Include="TaskbarProgress.cs" />
     <Compile Include="Token.cs" />
     <Compile Include="Types.cs" />
@@ -82,6 +84,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="tailp.ruleset" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Properties\Resources.resx">
@@ -94,6 +97,11 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Resources\BuildDate.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Analyzer Include="..\packages\SonarAnalyzer.CSharp.6.2.0.2536\analyzers\Google.Protobuf.dll" />
+    <Analyzer Include="..\packages\SonarAnalyzer.CSharp.6.2.0.2536\analyzers\SonarAnalyzer.CSharp.dll" />
+    <Analyzer Include="..\packages\SonarAnalyzer.CSharp.6.2.0.2536\analyzers\SonarAnalyzer.dll" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

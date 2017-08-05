@@ -34,27 +34,25 @@ namespace TailP
         }
 
         private readonly TimeSpan LOGICAL_LINE_DELAY = TimeSpan.FromMilliseconds(250);
-        private readonly TimeSpan DELAY_AFTER_SECOND_ERROR = TimeSpan.FromSeconds(1);
-        private readonly int TRIES_BEFORE_ERROR = 1;
         private readonly int PAGE_SIZE = 1024 * 1024; // 1MiB
 
         private LogicalLine _logicalLine = new LogicalLine();
-        private LogicalLinesHistory _logicalLinesHistory;
+        private readonly LogicalLinesHistory _logicalLinesHistory;
         private int _lineNumber = 0;
         private bool _isFilenameNeeded = true;
-        private string _file = string.Empty;
-        private object _minorLock = new object();
+        private readonly string _file = string.Empty;
+        private readonly object _minorLock = new object();
         private long _lastPos = 0;
         private DateTime _lastCreationTime = DateTime.MinValue;
-        private TailPBL _bl;
-        private int _fileIndex;
+        private readonly TailPBL _bl;
+        private readonly int _fileIndex;
         private FileInfoCache _fileInfo = null;
         private bool _errorShown = false;
-        private FileTypes _fileType = FileTypes.Regular;
-        private NumLinesStart _startFromType = NumLinesStart.begin;
+        private readonly FileTypes _fileType = FileTypes.Regular;
+        private readonly NumLinesStart _startFromType = NumLinesStart.begin;
         private int _startFromNum = 0;
-        private int _contextBefore = -1;
-        private int _contextAfter = -1;
+        private readonly int _contextBefore = -1;
+        private readonly int _contextAfter = -1;
         private int _afterCounter = -1;
 
         public FileTypes FileType
@@ -144,14 +142,12 @@ namespace TailP
 
             string archive;
             string finalFile;
-            if (ArchiveSupport.TryGetArchivePath(file, out archive, out finalFile))
+            if (ArchiveSupport.TryGetArchivePath(file, out archive, out finalFile) &&
+                ArchiveSupport.IsValidArchive(archive))
             {
-                if (ArchiveSupport.IsValidArchive(archive))
-                {
-                    _fileType = finalFile == string.Empty
-                                ? FileTypes.Archive
-                                : FileTypes.ArchivedFile;
-                }
+                _fileType = finalFile == string.Empty
+                            ? FileTypes.Archive
+                            : FileTypes.ArchivedFile;
             }
 
             UpdateFileInfo();
@@ -187,62 +183,55 @@ namespace TailP
             }
         }
 
-        private object _processLock = new object();
-        public void ProcessFile()
+        private readonly object _processLock = new object();
+
+        private void ProcessInternal(ref Stream stream)
+        {
+            UpdateFileInfo();
+            CheckReplacingOfFile();
+            if (IsFileUnchanged())
+            {
+                return;
+            }
+            _bl.LastFile = this;
+
+            stream = GetStream();
+            FindLastLinesInStream(stream);
+            ProcessStreamFromLastPosToEnd(stream, null);
+            CreateNoProcessTimer();
+        }
+
+        private void ProcessError(string error)
+        {
+            FlushLogicalLine();
+            ShowError(error);
+
+            if (_bl.Follow)
+            {
+                ResetCounters();
+            }
+        }
+
+        public void Process()
         {
             lock (_processLock)
             {
                 DisposeNoProcessTimer();
-                var tries = 0;
-                while (true)
+                Stream stream = null;
+                _errorShown = false;
+                try
                 {
-                    Stream stream = null;
-                    _errorShown = false;
-                    try
+                    ProcessInternal(ref stream);
+                }
+                catch (Exception ex)
+                {
+                    ProcessError(ex.Message);
+                }
+                finally
+                {
+                    if (stream != null)
                     {
-                        UpdateFileInfo();
-                        CheckReplacingOfFile();
-                        if (IsFileUnchanged())
-                        {
-                            return;
-                        }
-                        _bl.LastFile = this;
-
-                        stream = GetStream();
-                        FindLastLinesInStream(stream);
-                        ProcessStreamFromLastPosToEnd(stream, null);
-                        CreateNoProcessTimer();
-
-                        break; // no errors, exiting from while
-                    }
-                    catch (Exception ex)
-                    {
-                        if (tries++ < TRIES_BEFORE_ERROR)
-                        {
-                            if (tries > 1)
-                            {
-                                Thread.Sleep(DELAY_AFTER_SECOND_ERROR);
-                            }
-                        }
-                        else
-                        {
-                            FlushLogicalLine();
-                            ShowError(ex.Message);
-
-                            if (_bl.Follow)
-                            {
-                                ResetCounters();
-                            }
-
-                            break;
-                        }
-                    }
-                    finally
-                    {
-                        if (stream != null)
-                        {
-                            stream.Dispose();
-                        }
+                        stream.Dispose();
                     }
                 }
             }
@@ -327,22 +316,15 @@ namespace TailP
             }
         }
 
-        private bool ProcessStreamInPages(Stream stream, LogicalLinesHistory logicalLines)
+        private bool CanProcessInPages()
         {
-            // Optimization used:
-            //       read from end in pages by XXX bytes to a memory stream
-            //       and stops to read if _startFromNum lines found
-            //
-            //       Will not works, if line length is greater than PAGE_SIZE
-
+            // nonsense to process in pages
             if (FileSize <= PAGE_SIZE)
             {
                 return false;
             }
 
-            // TODO: To use optimization for before context
-            // Explanation:
-            //       it seems quite complicate to store the before context,
+            // NOTE: it seems quite complicate to store the before context,
             //       when file is reading in pages from end to begin.
             //       for the moment, disable the optimization when before context
             //       is needed
@@ -351,15 +333,30 @@ namespace TailP
                 return false;
             }
 
+            return true;
+        }
+
+        // Optimization used:
+        //       read from end in pages by XXX bytes to a memory stream
+        //       and stops to read if _startFromNum lines found
+        //
+        //       Will not works, if line length is greater than PAGE_SIZE
+        private bool ProcessStreamInPages(Stream stream, LogicalLinesHistory logicalLines)
+        {
+            if (!CanProcessInPages())
+            {
+                return false;
+            }
+
             var encoding = DetectEncoding(stream);
-            var foundLines = new LogicalLinesHistory(_startFromNum * (ContextLines + 1));
+            var historyDeep = _startFromNum * (ContextLines + 1);
+            var foundLines = new LogicalLinesHistory(historyDeep);
             var from = FileSize;
 
-            while (from != 0 &&
-                   foundLines.Count != _startFromNum * (ContextLines + 1))
+            while (from != 0 && foundLines.Count != historyDeep)
             {
                 var buf = new byte[PAGE_SIZE];
-                var pageLines = new LogicalLinesHistory(foundLines.Limit);
+                var pageLines = new LogicalLinesHistory(historyDeep);
 
                 from = Math.Max(0, from - PAGE_SIZE);
                 stream.Seek(from, SeekOrigin.Begin);
@@ -379,7 +376,7 @@ namespace TailP
                         {
                             var nul = sr.ReadLine(); // ignore first line, may be incomplete
                             var szBytes = encoding.GetByteCount(nul);
-                            if (szBytes >= PAGE_SIZE)
+                            if (szBytes >= PAGE_SIZE) // extra long line
                             {
                                 return false;
                             }
@@ -403,7 +400,6 @@ namespace TailP
                     if (ms != null)
                     {
                         ms.Dispose();
-                        ms = null;
                     }
                 }
                 FlushLogicalLine(pageLines);
@@ -414,10 +410,8 @@ namespace TailP
 
             logicalLines.ReplaceBy(foundLines);
             // because lines was searched in pages, line numbers are irrelevant
-            foreach (var logicalLine in logicalLines)
-            {
-                logicalLine.SetLinesNumberToUnknown();
-            }
+            logicalLines.SetLinesNumberToUnknown();
+
             LastPos = FileSize;
 
             return true;
@@ -524,7 +518,7 @@ namespace TailP
             _isFilenameNeeded = true;
         }
 
-        private object _errorShownLock = new object();
+        private readonly object _errorShownLock = new object();
         private void ShowError(string error)
         {
             bool showError;
@@ -602,6 +596,21 @@ namespace TailP
                         _logicalLine.IsShowedFlagExists;
         }
 
+        private bool SkipFromNumLines()
+        {
+            var mustSkip =
+                _startFromType == NumLinesStart.begin &&
+                _startFromNum > 0 &&
+                _logicalLine.IsVisible;
+
+            if (mustSkip)
+            {
+                --_startFromNum;
+            }
+
+            return mustSkip;
+        }
+
         private void FlushLogicalLine(LogicalLinesHistory logicalLinesHistory = null)
         {
             if (_logicalLine.IsEmpty)
@@ -610,35 +619,26 @@ namespace TailP
             }
 
             _logicalLine.IsVisible = !ShouldBeHided() && ShouldBeShown();
-            if (_logicalLine.IsVisible || _afterCounter > 0)
+
+            if (
+                (_logicalLine.IsVisible || _afterCounter > 0) &&
+                !SkipFromNumLines())
             {
-                // skip first _startFromNum lines
-                if (_startFromType == NumLinesStart.begin &&
-                    _startFromNum > 0)
+                var forPrinting = new LogicalLinesHistory();
+                PrepareLogicalLineForPrinting(_logicalLine, forPrinting);
+
+                if (logicalLinesHistory == null)
                 {
-                    if (_logicalLine.IsVisible)
-                    {
-                        --_startFromNum;
-                    }
+                    PrintLogicalLines(forPrinting);
                 }
                 else
                 {
-                    var forPrinting = new LogicalLinesHistory();
-                    PrepareLogicalLineForPrinting(_logicalLine, forPrinting);
+                    logicalLinesHistory.Enqueue(forPrinting);
+                }
 
-                    if (logicalLinesHistory == null)
-                    {
-                        PrintLogicalLines(forPrinting);
-                    }
-                    else
-                    {
-                        logicalLinesHistory.Enqueue(forPrinting);
-                    }
-
-                    if (_logicalLine.IsVisible)
-                    {
-                        _afterCounter = _contextAfter;
-                    }
+                if (_logicalLine.IsVisible)
+                {
+                    _afterCounter = _contextAfter;
                 }
             }
 

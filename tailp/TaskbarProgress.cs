@@ -9,7 +9,9 @@ namespace TailP
     [Flags]
     public enum TaskbarStates
     {
+#pragma warning disable S2346 // Flags enumerations zero-value members should be named "None"
         NoProgress = 0,
+#pragma warning restore S2346 // Flags enumerations zero-value members should be named "None"
         Indeterminate = 0x1,
         Normal = 0x2,
         Error = 0x4,

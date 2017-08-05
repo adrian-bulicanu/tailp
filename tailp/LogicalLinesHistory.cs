@@ -46,5 +46,13 @@ namespace TailP
             Clear();
             Enqueue(history);
         }
+
+        public void SetLinesNumberToUnknown()
+        {
+            foreach (var line in this)
+            {
+                line.SetLinesNumberToUnknown();
+            }
+        }
     }
 }

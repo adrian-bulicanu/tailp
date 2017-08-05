@@ -19,7 +19,7 @@ namespace TailP
         public readonly string TRUNCATED_MARKER_END = ">";
         public readonly string TRUNCATED_MARKER_MIDDLE = "<...>";
 
-        private HashSet<int> _foundShowFilters = new HashSet<int>();
+        private readonly HashSet<int> _foundShowFilters = new HashSet<int>();
         public HashSet<int> FoundShowFilters
         {
             get
@@ -28,7 +28,7 @@ namespace TailP
             }
         }
 
-        private HashSet<int> _foundHideFilters = new HashSet<int>();
+        private readonly HashSet<int> _foundHideFilters = new HashSet<int>();
         public HashSet<int> FoundHideFilters
         {
             get
@@ -46,7 +46,7 @@ namespace TailP
         {
         }
 
-        public Line(Line other, bool copyTokens = true): base()
+        public Line(Line other, bool copyTokens = true) : base()
         {
             Comparison = other.Comparison;
             UseRegex = other.UseRegex;
@@ -168,7 +168,7 @@ namespace TailP
         /// <summary>
         /// Check filters in Types.None items and modify list if filtered item found
         /// </summary>
-        private void CheckFilter(string filterText, int filterIndex, Types type, int colorIndex, HashSet<int> foundFilters)
+        private void CheckFilter(string filterText, int filterIndex, Types type, int colorIndex, ISet<int> foundFilters)
         {
             var currentList = new List<Token>(this);
             Clear();
@@ -215,17 +215,20 @@ namespace TailP
             }
         }
 
-        public void CheckFilters(List<string> showFilters, List<string> hideFilters, List<string> highlightFilters)
+        public void CheckFilters(IEnumerable<string> showFilters,
+            IEnumerable<string> hideFilters, IEnumerable<string> highlightFilters)
         {
-            for (int i = 0; i != hideFilters.Count; ++i)
+            var index = 0;
+            foreach(var filter in hideFilters)
             {
-                CheckFilter(hideFilters[i], i, Types.Hide, 0, _foundHideFilters);
+                CheckFilter(filter, index++, Types.Hide, 0, _foundHideFilters);
             }
 
             var colorIndex = 0;
-            for (int i = 0; i != showFilters.Count; ++i)
+            index = 0;
+            foreach(var filter in showFilters)
             {
-                CheckFilter(showFilters[i], i, Types.Show, colorIndex++, _foundShowFilters);
+                CheckFilter(filter, index++, Types.Show, colorIndex++, _foundShowFilters);
             }
 
             foreach (var filter in highlightFilters)

@@ -55,11 +55,11 @@ namespace TailP
         }
     }
 
-    class Program
+    static class Program
     {
         // used hardcoded colors instead of default, because on Ctrl-C color changes to last used
-        static private readonly ConsoleColor DEFAULT_BACKGROUND = ConsoleColor.Black;// Console.BackgroundColor;
-        static private readonly ConsoleColor DEFAULT_FOREGROUND = ConsoleColor.Gray;// Console.ForegroundColor;
+        static private readonly ConsoleColor DEFAULT_BACKGROUND = ConsoleColor.Black;
+        static private readonly ConsoleColor DEFAULT_FOREGROUND = ConsoleColor.Gray;
 
         static private readonly int STATUS_TIMER_PERIOD_MS = 1000;
 
@@ -229,11 +229,11 @@ namespace TailP
                 _statusTimer.Dispose();
                 UpdateStatus();
             }
-            catch (TailPExceptionHelp)
+            catch (TailPHelpException)
             {
                 WriteMessage(_bl.GetHelp(), Types.None);
             }
-            catch (TailPExceptionArgs ex)
+            catch (TailPArgsException ex)
             {
                 WriteMessage(ex.ToString(), Types.Error);
                 WriteMessage(_bl.GetHelp(), Types.None);
@@ -303,7 +303,7 @@ namespace TailP
             return color;
         }
 
-        static ConsoleColor TypeToForegroundColor(Types type, int colorIndex, int fileIndex)
+        static ConsoleColor TypeToForegroundColor(Types type, int fileIndex)
         {
             switch(type)
             {
@@ -325,7 +325,7 @@ namespace TailP
             }
         }
 
-        static ConsoleColor TypeToBackgroundColor(Types type, int colorIndex, int fileIndex)
+        static ConsoleColor TypeToBackgroundColor(Types type, int colorIndex)
         {
             switch (type)
             {
@@ -361,8 +361,8 @@ namespace TailP
                     }
                     else
                     {
-                        Console.BackgroundColor = TypeToBackgroundColor(item.Type, item.ColorIndex, fileIndex);
-                        Console.ForegroundColor = TypeToForegroundColor(item.Type, item.ColorIndex, fileIndex);
+                        Console.BackgroundColor = TypeToBackgroundColor(item.Type, item.ColorIndex);
+                        Console.ForegroundColor = TypeToForegroundColor(item.Type, fileIndex);
                         Console.Write(item.Text);
                     }
                 }
@@ -376,8 +376,8 @@ namespace TailP
             lock (_writeLineLock)
             {
 
-                Console.ForegroundColor = TypeToForegroundColor(type, 0, 0);
-                Console.BackgroundColor = TypeToBackgroundColor(type, 0, 0);
+                Console.ForegroundColor = TypeToForegroundColor(type, 0);
+                Console.BackgroundColor = TypeToBackgroundColor(type, 0);
                 Console.WriteLine(mess);
             }
         }

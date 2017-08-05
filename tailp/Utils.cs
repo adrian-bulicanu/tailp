@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 
 namespace TailP
 {
-    public class Utils
+    public static class Utils
     {
         public static bool IsMatchMask(string path, string mask)
         {

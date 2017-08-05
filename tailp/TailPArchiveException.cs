@@ -6,21 +6,21 @@ using System.Runtime.Serialization;
 namespace TailP
 {
     [Serializable]
-    public class TailPExceptionArchive : TailPException
+    public class TailPArchiveException : TailPException
     {
-        public TailPExceptionArchive()
+        public TailPArchiveException()
         {
         }
 
-        public TailPExceptionArchive(string message) : base(message)
+        public TailPArchiveException(string message) : base(message)
         {
         }
 
-        public TailPExceptionArchive(string message, Exception innerException) : base(message, innerException)
+        public TailPArchiveException(string message, Exception innerException) : base(message, innerException)
         {
         }
 
-        protected TailPExceptionArchive(SerializationInfo info, StreamingContext context) : base(info, context)
+        protected TailPArchiveException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
     }

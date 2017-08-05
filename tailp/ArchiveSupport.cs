@@ -107,7 +107,7 @@ namespace TailP
             string file;
             if (!TryGetArchivePath(path, out archive, out file))
             {
-                throw new TailPExceptionArchive(string.Format("Invalid archive path {0}", path));
+                throw new TailPArchiveException(string.Format("Invalid archive path {0}", path));
             }
 
             lock (_lock)
@@ -131,7 +131,7 @@ namespace TailP
             string file;
             if (!TryGetArchivePath(path, out archive, out file))
             {
-                throw new TailPExceptionArchive(string.Format("Invalid archive path {0}", path));
+                throw new TailPArchiveException(string.Format("Invalid archive path {0}", path));
             }
 
             lock (_lock)
@@ -143,13 +143,16 @@ namespace TailP
                 }
                 else
                 {
-                    throw new TailPExceptionArchive(string.Format("File not found {0}", file));
+                    throw new TailPArchiveException(string.Format("File not found {0}", file));
                 }
             }
         }
 
-        // TODO: to dispose after inactivity timeout
+        
+#pragma warning disable S1135 // Track uses of "TODO" tags
+// TODO: to dispose after inactivity timeout
         private static Dictionary<string, IArchive> _archives =
+#pragma warning restore S1135 // Track uses of "TODO" tags
             new Dictionary<string, IArchive>(StringComparer.CurrentCultureIgnoreCase);
         // archive path / file path inside archive / entry
         private static Dictionary<string, Dictionary<string, IArchiveEntry>> _archivesEntries = 
@@ -165,7 +168,6 @@ namespace TailP
                     var fs = new FileStream(archive, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                     arch = ArchiveFactory.Open(fs);
                     _archives.Add(archive, arch);
-                    fs = null;
                 }
 
                 return arch;
@@ -197,7 +199,7 @@ namespace TailP
             string file;
             if (!TryGetArchivePath(path, out archive, out file))
             {
-                throw new TailPExceptionArchive(string.Format("Invalid archive path {0}", path));
+                throw new TailPArchiveException(string.Format("Invalid archive path {0}", path));
             }
 
             try
@@ -209,12 +211,12 @@ namespace TailP
                 }
                 else
                 {
-                    throw new TailPExceptionArchive(string.Format("File not found {0}", path));
+                    throw new TailPArchiveException(string.Format("File not found {0}", path));
                 }
             }
             catch (InvalidOperationException ex)
             {
-                throw new TailPExceptionArchive(ex.Message, ex);
+                throw new TailPArchiveException(ex.Message, ex);
             }
         }
     }

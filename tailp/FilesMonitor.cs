@@ -7,15 +7,17 @@ namespace TailP
 {
     /// <summary>
     /// </summary>
-    public class FilesMonitor
+    public static class FilesMonitor
     {
         private static object _monitorEntriesLock = new object();
         private static HashSet<FilesMonitorEntry> _monitorEntries = new HashSet<FilesMonitorEntry>();
         public static bool Recursive { get; set; }
 
+#pragma warning disable S3264 // Events should be invoked
         public static event FilesMonitorEntryHandler Created;
         public static event FilesMonitorEntryHandler Deleted;
         public static event FilesMonitorEntryHandler Changed;
+#pragma warning restore S3264 // Events should be invoked
 
         /// <summary>
         /// check all files and force created event

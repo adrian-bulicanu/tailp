@@ -149,7 +149,7 @@ namespace tailpTests
         {
             string path = @"..\..\TestFiles\dummytext.txt";
 
-            Assert.ThrowsException<TailPExceptionArchive>(() => ArchiveSupport.EnumerateFiles(path));
+            Assert.ThrowsException<TailPArchiveException>(() => ArchiveSupport.EnumerateFiles(path));
         }
 
         [TestMethod]

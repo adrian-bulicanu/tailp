@@ -10,7 +10,9 @@ using System.Threading;
 
 namespace TailP
 {
+#pragma warning disable S101 // Types should be named in camel case
     public sealed class TailPBL : IDisposable
+#pragma warning restore S101 // Types should be named in camel case
     {
         public delegate void NewLineFunc(Line line, int fileIndex);
 
@@ -51,11 +53,11 @@ namespace TailP
         private static readonly string HELP_VERSION_FORMAT = @"    {0} {1} / {2}";
         private static readonly string CONTEXT_LINE_DELIMITER = @"--";
 
-        private AutoResetEvent _processEvent = new AutoResetEvent(false);
-        private ConcurrentQueue<File> _pollFilesToBeProcess = new ConcurrentQueue<File>();
-        private ConcurrentQueue<File> _pushFilesToBeProcess = new ConcurrentQueue<File>();
+        private readonly AutoResetEvent _processEvent = new AutoResetEvent(false);
+        private readonly ConcurrentQueue<File> _pollFilesToBeProcess = new ConcurrentQueue<File>();
+        private readonly ConcurrentQueue<File> _pushFilesToBeProcess = new ConcurrentQueue<File>();
         // hashset<File> should be used here, but where is no way to get fast a element from hashset
-        private ConcurrentDictionary<string, File> _files =
+        private readonly ConcurrentDictionary<string, File> _files =
             new ConcurrentDictionary<string, File>(StringComparer.CurrentCultureIgnoreCase);
         private int _lastFileIndex = 0;
         public object PrintLock { get; private set; }
@@ -77,7 +79,7 @@ namespace TailP
         public int ContextAfter { get; private set; }
         public int ContextBefore { get; private set; }
 
-        private object _showFileLocker = new object();
+        private readonly object _showFileLocker = new object();
         private bool? _showFile = null;
         public bool ShowFile
         {
@@ -122,7 +124,7 @@ namespace TailP
             }
         }
 
-        private object _lastFileLock = new object();
+        private readonly object _lastFileLock = new object();
         private File _lastFile;
         public File LastFile
         {
@@ -211,7 +213,7 @@ namespace TailP
         {
             if (index == lastIndex)
             {
-                throw new TailPExceptionArgs(string.Format("Invalid arg {0}", arg));
+                throw new TailPArgsException(string.Format("Invalid arg {0}", arg));
             }
 
             ++index;
@@ -221,7 +223,7 @@ namespace TailP
         {
             if (args.Length < 1)
             {
-                throw new TailPExceptionArgs("Invalid args");
+                throw new TailPArgsException("Invalid args");
             }
 
             var lastIndex = args.Length - 1;
@@ -234,7 +236,7 @@ namespace TailP
                 {
                     case "-h":
                     case "--help":
-                        throw new TailPExceptionHelp();
+                        throw new TailPHelpException();
                     case "-c":
                     case "--location":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
@@ -329,7 +331,7 @@ namespace TailP
             }
             else
             {
-                throw new TailPExceptionArgs("no files to process");
+                throw new TailPArgsException("no files to process");
             }
         }
 
@@ -402,21 +404,17 @@ namespace TailP
                          i != MAX_PUSH_PROCESS_COUNT && _pushFilesToBeProcess.Any();
                          ++i)
                 {
-                    if (_pushFilesToBeProcess.TryDequeue(out file))
+                    if (_pushFilesToBeProcess.TryDequeue(out file) &&
+                        file.FileType != FileTypes.Archive)
                     {
-                        if (file.FileType != FileTypes.Archive)
-                        {
-                            file.ProcessFile();
-                        }
+                        file.Process();
                     }
                 }
 
-                if (_pollFilesToBeProcess.TryDequeue(out file))
+                if (_pollFilesToBeProcess.TryDequeue(out file) &&
+                    file.FileType != FileTypes.Archive)
                 {
-                    if (file.FileType != FileTypes.Archive)
-                    {
-                        file.ProcessFile();
-                    }
+                    file.Process();
                 }
             }
         }
@@ -490,7 +488,7 @@ namespace TailP
             var loc = location.Trim().ToLower();
             if (loc.Length < 2)
             {
-                throw new TailPExceptionArgs(
+                throw new TailPArgsException(
                     string.Format("invalid starting location '{0}'", location));
             }
 
@@ -505,7 +503,7 @@ namespace TailP
             }
             catch (Exception ex)
             {
-                throw new TailPExceptionArgs(
+                throw new TailPArgsException(
                     string.Format("invalid starting location '{0}', parse error '{1}'",
                         location, ex.Message), ex);
             }
@@ -525,7 +523,7 @@ namespace TailP
                 }
             }
 
-            throw new TailPExceptionArgs(
+            throw new TailPArgsException(
                 string.Format("invalid context number '{0}'", num));
         }
 
@@ -534,7 +532,7 @@ namespace TailP
             var num = numLines.Trim().ToLower();
             if (num.Length < 1)
             {
-                throw new TailPExceptionArgs(
+                throw new TailPArgsException(
                     string.Format("invalid number lines '{0}'", num));
             }
 
@@ -547,7 +545,7 @@ namespace TailP
             }
             else
             {
-                throw new TailPExceptionArgs(
+                throw new TailPArgsException(
                     string.Format("invalid number lines '{0}'", num));
             }
         }
@@ -561,7 +559,7 @@ namespace TailP
             }
             catch (ArgumentException)
             {
-                throw new TailPExceptionArgs(
+                throw new TailPArgsException(
                     string.Format("Invalid comparison option '{0}'", option));
             }
         }
