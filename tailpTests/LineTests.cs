@@ -96,7 +96,7 @@ namespace tailpTests
             var exp = new Line
             {
                 new Token(Types.None, "i"),
-                new Token(Types.Truncated, _fixture.TRUNCATED_MARKER_END),
+                new Token(Types.Truncated, Constants.TRUNCATED_MARKER_END),
             };
             CollectionAssert.AreEqual(exp, _fixture);
         }
@@ -109,7 +109,7 @@ namespace tailpTests
             {
                 new Token(Types.None,        "item1"),
                 new Token(Types.Highlight,   "item", 0),
-                new Token(Types.Truncated,   _fixture.TRUNCATED_MARKER_END),
+                new Token(Types.Truncated,   Constants.TRUNCATED_MARKER_END),
             };
             CollectionAssert.AreEqual(exp, _fixture);
         }
@@ -123,7 +123,7 @@ namespace tailpTests
                 new Token(Types.None,        "item1"),
                 new Token(Types.Highlight,   "item2", 0),
                 new Token(Types.None,        "item"),
-                new Token(Types.Truncated,   _fixture.TRUNCATED_MARKER_END),
+                new Token(Types.Truncated,   Constants.TRUNCATED_MARKER_END),
             };
             CollectionAssert.AreEqual(exp, _fixture);
         }
@@ -157,10 +157,10 @@ namespace tailpTests
             var exp = new Line
             {
                 new Token(Types.Highlight,   "item1long", 0),
-                new Token(Types.Truncated,   _fixture.TRUNCATED_MARKER_MIDDLE),
+                new Token(Types.Truncated,   Constants.TRUNCATED_MARKER_MIDDLE),
                 new Token(Types.Highlight,   "item3long", 1),
                 new Token(Types.None,        "i"),
-                new Token(Types.Truncated,   _fixture.TRUNCATED_MARKER_MIDDLE),
+                new Token(Types.Truncated,   Constants.TRUNCATED_MARKER_MIDDLE),
                 new Token(Types.None,        "ng"),
                 new Token(Types.Highlight,   "item5long", 2),
             };

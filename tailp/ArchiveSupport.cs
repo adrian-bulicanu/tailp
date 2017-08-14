@@ -76,23 +76,18 @@ namespace TailP
                 CreatedTime = entry.CreatedTime.GetValueOrDefault();
             }
 
-            public override int GetHashCode()
-            {
-                return Path.GetHashCode();
-            }
+            public override int GetHashCode() => Path.GetHashCode();
 
             public override bool Equals(object obj)
             {
                 if (obj == null) return false;
 
-                var e = obj as EntryInfo;
-                if (e != null)
+                if (obj is EntryInfo e)
                 {
                     return Path.Equals(e.Path, StringComparison.InvariantCultureIgnoreCase);
                 }
 
-                var s = obj as string;
-                if (s != null)
+                if (obj is string s)
                 {
                     return Path.Equals(s, StringComparison.InvariantCultureIgnoreCase);
                 }
@@ -103,9 +98,7 @@ namespace TailP
 
         public static IEnumerable<string> EnumerateFiles(string path)
         {
-            string archive;
-            string file;
-            if (!TryGetArchivePath(path, out archive, out file))
+            if (!TryGetArchivePath(path, out string archive, out string file))
             {
                 throw new TailPArchiveException(string.Format("Invalid archive path {0}", path));
             }
@@ -127,17 +120,14 @@ namespace TailP
         /// <returns></returns>
         public static EntryInfo GetArchivedFileInfo(string path)
         {
-            string archive;
-            string file;
-            if (!TryGetArchivePath(path, out archive, out file))
+            if (!TryGetArchivePath(path, out string archive, out string file))
             {
                 throw new TailPArchiveException(string.Format("Invalid archive path {0}", path));
             }
 
             lock (_lock)
             {
-                IArchiveEntry entry;
-                if (GetArchiveEntries(archive).TryGetValue(file, out entry))
+                if (GetArchiveEntries(archive).TryGetValue(file, out IArchiveEntry entry))
                 {
                     return new EntryInfo(entry);
                 }
@@ -162,8 +152,7 @@ namespace TailP
         {
             lock(_lock)
             {
-                IArchive arch;
-                if (!_archives.TryGetValue(archive, out arch))
+                if (!_archives.TryGetValue(archive, out IArchive arch))
                 {
                     var fs = new FileStream(archive, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                     arch = ArchiveFactory.Open(fs);
@@ -180,8 +169,8 @@ namespace TailP
 
             lock (_lock)
             {
-                Dictionary<string, IArchiveEntry> archiveEntries;
-                if (!_archivesEntries.TryGetValue(archive, out archiveEntries))
+                if (!_archivesEntries.TryGetValue(archive,
+                    out Dictionary<string, IArchiveEntry> archiveEntries))
                 {
                     archiveEntries = arch.Entries
                         .Where(x => !x.IsDirectory)
@@ -195,17 +184,14 @@ namespace TailP
 
         public static Stream GetFileStream(string path)
         {
-            string archive;
-            string file;
-            if (!TryGetArchivePath(path, out archive, out file))
+            if (!TryGetArchivePath(path, out string archive, out string file))
             {
                 throw new TailPArchiveException(string.Format("Invalid archive path {0}", path));
             }
 
             try
             {
-                IArchiveEntry entry;
-                if (GetArchiveEntries(archive).TryGetValue(file, out entry))
+                if (GetArchiveEntries(archive).TryGetValue(file, out IArchiveEntry entry))
                 {
                     return entry.OpenEntryStream();
                 }

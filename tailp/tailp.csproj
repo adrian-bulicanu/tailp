@@ -11,6 +11,7 @@
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <SonarQubeTestProject>False</SonarQubeTestProject>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -22,7 +23,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <LangVersion>5</LangVersion>
+    <LangVersion>default</LangVersion>
     <Prefer32Bit>false</Prefer32Bit>
     <CodeAnalysisRuleSet>tailp.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
@@ -36,7 +37,7 @@
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <LangVersion>5</LangVersion>
+    <LangVersion>default</LangVersion>
     <CodeAnalysisRuleSet>tailp.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
@@ -55,6 +56,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ArchiveSupport.cs" />
+    <Compile Include="Configuration.cs" />
+    <Compile Include="Constants.cs" />
     <Compile Include="File.cs" />
     <Compile Include="FilesMonitor.cs" />
     <Compile Include="FilesMonitorEntry.cs" />
@@ -72,12 +75,14 @@
     </Compile>
     <Compile Include="RegexObjects.cs" />
     <Compile Include="StartLocationTypes.cs" />
+    <Compile Include="StringExtensions.cs" />
     <Compile Include="TailPArgsException.cs" />
     <Compile Include="TailPBL.cs" />
     <Compile Include="TailPException.cs" />
     <Compile Include="TailPArchiveException.cs" />
     <Compile Include="TailPHelpException.cs" />
     <Compile Include="TaskbarProgress.cs" />
+    <Compile Include="TimespanExtensions.cs" />
     <Compile Include="Token.cs" />
     <Compile Include="Types.cs" />
     <Compile Include="Utils.cs" />

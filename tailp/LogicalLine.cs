@@ -11,78 +11,24 @@ namespace TailP
         public bool IsVisible { get; set; }
         public bool IsPrinted { get; set; }
 
-        public bool IsEmpty
-        {
-            get
-            {
-                return !this.Any();
-            }
-        }
+        public bool IsEmpty => !this.Any();
 
-        public int LineNumber
-        {
-            get
-            {
-                if (IsEmpty)
-                {
-                    return 0;
-                }
-                else
-                {
-                    return this.First().LineNumber;
-                }
-            }
-        }
+        public int LineNumber => IsEmpty ? 0 : this.First().LineNumber;
 
-        public bool IsFilterFound
-        {
-            get
-            {
-                return this.Any(x => x.FoundShowFilters.Any());
-            }
-        }
+        public bool IsFilterFound => this.Any(x => x.IsShowed);
 
-        public int FoundShowFiltersCount
-        {
-            get
-            {
-                var foundFilters = new HashSet<int>();
-                foreach (var line in this)
-                {
-                    foundFilters.UnionWith(line.FoundShowFilters);
-                }
-                return foundFilters.Count;
-            }
-        }
+        public int FoundShowFiltersCount =>
+            this.SelectMany(x => x.FoundShowFilters.Select(y => y))
+                .Distinct()
+                .Count();
 
-        public int FoundHideFiltersCount
-        {
-            get
-            {
-                var foundFilters = new HashSet<int>();
-                foreach (var line in this)
-                {
-                    foundFilters.UnionWith(line.FoundHideFilters);
-                }
-                return foundFilters.Count;
-            }
-        }
+        public int FoundHideFiltersCount =>
+            this.SelectMany(x => x.FoundHideFilters.Select(y => y))
+                .Distinct()
+                .Count();
 
-        public bool IsShowedFlagExists
-        {
-            get
-            {
-                return this.Any(x => x.IsShowed);
-            }
-        }
-
-        public bool IsHidedFlagExists
-        {
-            get
-            {
-                return this.Any(x => x.IsHided);
-            }
-        }
+        public bool IsShowedFlagExists => this.Any(x => x.IsShowed);
+        public bool IsHidedFlagExists => this.Any(x => x.IsHided);
 
         public void SetLinesNumberToUnknown()
         {

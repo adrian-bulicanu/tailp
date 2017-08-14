@@ -10,37 +10,13 @@ namespace TailP
 {
     public class Line : List<Token>
     {
-        private readonly string TAB_REPLACER = "    ";
-        private readonly string LINE_NUMBER_FORMAT = "{0:D8} ";
-        private readonly string LINE_NUMBER_PADDING = "         ";
-        private readonly string LINE_NUMBER_UNKNOWN = " unknown ";
+        public HashSet<int> FoundShowFilters { get; private set; } = new HashSet<int>();
+        public HashSet<int> FoundHideFilters { get; private set; } = new HashSet<int>();
+        public int LineNumber { get; private set; } = 0;
 
-        // NOTE: unit tests to be edited if markers length is changed!
-        public readonly string TRUNCATED_MARKER_END = ">";
-        public readonly string TRUNCATED_MARKER_MIDDLE = "<...>";
-
-        private readonly HashSet<int> _foundShowFilters = new HashSet<int>();
-        public HashSet<int> FoundShowFilters
-        {
-            get
-            {
-                return _foundShowFilters;
-            }
-        }
-
-        private readonly HashSet<int> _foundHideFilters = new HashSet<int>();
-        public HashSet<int> FoundHideFilters
-        {
-            get
-            {
-                return _foundHideFilters;
-            }
-        }
-
-        public StringComparison Comparison { get; set; }
-        public bool UseRegex { get; set; }
-        public bool IsLogicalContinuation { get; private set; }
-        public int LineNumber { get; private set; }
+        private readonly StringComparison _comparison = Configuration.ComparisonOptions;
+        private readonly bool _useRegex = Configuration.Regex;
+        private readonly bool _isLogicalContinuation;
 
         public Line() : base()
         {
@@ -48,9 +24,9 @@ namespace TailP
 
         public Line(Line other, bool copyTokens = true) : base()
         {
-            Comparison = other.Comparison;
-            UseRegex = other.UseRegex;
-            IsLogicalContinuation = other.IsLogicalContinuation;
+            _comparison = other._comparison;
+            _useRegex = other._useRegex;
+            _isLogicalContinuation = other._isLogicalContinuation;
             LineNumber = other.LineNumber;
             if (copyTokens)
             {
@@ -61,39 +37,20 @@ namespace TailP
         public Line(string s, StringComparison comparison, bool useRegex,
             bool isLogicalContinuation, int lineNumber)
         {
-            Add(new Token(Types.None, s.Replace("\t", TAB_REPLACER)));
-            Comparison = comparison;
-            UseRegex = useRegex;
-            IsLogicalContinuation = isLogicalContinuation;
+            Add(new Token(Types.None, s.Replace("\t", Constants.TAB_REPLACER)));
+            _comparison = comparison;
+            _useRegex = useRegex;
+            _isLogicalContinuation = isLogicalContinuation;
             LineNumber = lineNumber;
         }
 
         /// <summary>
         /// Returns total length of text
         /// </summary>
-        public int Length
-        {
-            get
-            {
-                return this.Sum(x => x.Text.Length);
-            }
-        }
+        public int Length => this.Sum(x => x.Text.Length);
 
-        public bool IsShowed
-        {
-            get
-            {
-                return _foundShowFilters.Any();
-            }
-        }
-
-        public bool IsHided
-        {
-            get
-            {
-                return _foundHideFilters.Any();
-            }
-        }
+        public bool IsShowed => FoundShowFilters.Any();
+        public bool IsHided => FoundHideFilters.Any();
 
         /// <summary>
         /// Analog to string.Substring
@@ -106,7 +63,7 @@ namespace TailP
         {
             if (start < 0 || start >= this.Length)
             {
-                throw new ArgumentOutOfRangeException("start");
+                throw new ArgumentOutOfRangeException(nameof(start));
             }
 
             Line result = new Line(this, false);
@@ -144,24 +101,20 @@ namespace TailP
         /// <returns>index and length of found token in text. (-1, 0) if token is not found</returns>
         private Tuple<int, int> GetMatchTextIndex(string text, string filterText)
         {
-            if (UseRegex)
+            if (_useRegex)
             {
                 var regex = RegexObjects.GetRegexObject(filterText,
                     () => new Regex(filterText, RegexOptions.Compiled));
                 var matches = regex.Matches(text);
-                if (matches.Count > 0)
-                {
-                    return new Tuple<int, int>(matches[0].Index, matches[0].Length);
-                }
-                else
-                {
-                    return new Tuple<int, int>(-1, 0);
-                }
+
+                return matches.Count > 0 ?
+                    new Tuple<int, int>(matches[0].Index, matches[0].Length) :
+                    new Tuple<int, int>(-1, 0);
             }
             else
             {
                 return new Tuple<int, int>(
-                    text.IndexOf(filterText, 0, Comparison),
+                    text.IndexOf(filterText, 0, _comparison),
                     filterText.Length);
             }
         }
@@ -219,16 +172,16 @@ namespace TailP
             IEnumerable<string> hideFilters, IEnumerable<string> highlightFilters)
         {
             var index = 0;
-            foreach(var filter in hideFilters)
+            foreach (var filter in hideFilters)
             {
-                CheckFilter(filter, index++, Types.Hide, 0, _foundHideFilters);
+                CheckFilter(filter, index++, Types.Hide, 0, FoundHideFilters);
             }
 
             var colorIndex = 0;
             index = 0;
-            foreach(var filter in showFilters)
+            foreach (var filter in showFilters)
             {
-                CheckFilter(filter, index++, Types.Show, colorIndex++, _foundShowFilters);
+                CheckFilter(filter, index++, Types.Show, colorIndex++, FoundShowFilters);
             }
 
             foreach (var filter in highlightFilters)
@@ -244,12 +197,13 @@ namespace TailP
                 return true;
             }
 
-            var remainder = Substring(resultStringLength - TRUNCATED_MARKER_END.Length);
+            var remainder = Substring(resultStringLength - Constants.TRUNCATED_MARKER_END.Length);
             var canBeTruncated = !remainder.Any(x => x.Type != Types.None);
+
             if (force || canBeTruncated)
             {
-                var result = Substring(0, resultStringLength - TRUNCATED_MARKER_END.Length);
-                result.Add(new Token(Types.Truncated, TRUNCATED_MARKER_END));
+                var result = Substring(0, resultStringLength - Constants.TRUNCATED_MARKER_END.Length);
+                result.Add(new Token(Types.Truncated, Constants.TRUNCATED_MARKER_END));
                 Clear();
                 AddRange(result);
                 return true;
@@ -278,7 +232,7 @@ namespace TailP
                 }
 
                 if (longestIndex < 0 ||
-                    longestLength < TRUNCATED_MARKER_MIDDLE.Length + 1)
+                    longestLength < Constants.TRUNCATED_MARKER_MIDDLE.Length + 1)
                 {
                     return;
                 }
@@ -292,11 +246,11 @@ namespace TailP
             var item = this[index];
 
             var finalLength = Math.Max(
-                item.Text.Length - toBeTruncated, TRUNCATED_MARKER_MIDDLE.Length);
+                item.Text.Length - toBeTruncated, Constants.TRUNCATED_MARKER_MIDDLE.Length);
             var firstItemLength = Math.Max(
-                (finalLength - TRUNCATED_MARKER_MIDDLE.Length) / 2, 0);
+                (finalLength - Constants.TRUNCATED_MARKER_MIDDLE.Length) / 2, 0);
             var secondItemLength = finalLength - firstItemLength -
-                                   TRUNCATED_MARKER_MIDDLE.Length;
+                                   Constants.TRUNCATED_MARKER_MIDDLE.Length;
 
             RemoveAt(index);
 
@@ -306,7 +260,7 @@ namespace TailP
                     Types.None, item.Text.Substring(0, firstItemLength)));
             }
 
-            Insert(index++, new Token(Types.Truncated, TRUNCATED_MARKER_MIDDLE));
+            Insert(index++, new Token(Types.Truncated, Constants.TRUNCATED_MARKER_MIDDLE));
 
             if (secondItemLength > 0)
             {
@@ -319,9 +273,9 @@ namespace TailP
         {
             ForEach(x =>
             {
-                if (x.Type == Types.LineNumber && x.Text != LINE_NUMBER_PADDING)
+                if (x.Type == Types.LineNumber && x.Text != Constants.LINE_NUMBER_PADDING)
                 {
-                    x.Text = LINE_NUMBER_UNKNOWN;
+                    x.Text = Constants.LINE_NUMBER_UNKNOWN;
                 }
             });
         }
@@ -329,8 +283,8 @@ namespace TailP
         public void AddLineNumber()
         {
             Insert(0, new Token(Types.LineNumber,
-                IsLogicalContinuation ? LINE_NUMBER_PADDING :
-                    string.Format(LINE_NUMBER_FORMAT, LineNumber)));
+                _isLogicalContinuation ? Constants.LINE_NUMBER_PADDING :
+                    string.Format(Constants.LINE_NUMBER_FORMAT, LineNumber)));
         }
 
         public void Truncate(int resultStringLength)

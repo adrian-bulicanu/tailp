@@ -33,9 +33,6 @@ namespace TailP
             }
         }
 
-        private readonly TimeSpan LOGICAL_LINE_DELAY = TimeSpan.FromMilliseconds(250);
-        private readonly int PAGE_SIZE = 1024 * 1024; // 1MiB
-
         private LogicalLine _logicalLine = new LogicalLine();
         private readonly LogicalLinesHistory _logicalLinesHistory;
         private int _lineNumber = 0;
@@ -49,10 +46,7 @@ namespace TailP
         private FileInfoCache _fileInfo = null;
         private bool _errorShown = false;
         private readonly FileTypes _fileType = FileTypes.Regular;
-        private readonly NumLinesStart _startFromType = NumLinesStart.begin;
         private int _startFromNum = 0;
-        private readonly int _contextBefore = -1;
-        private readonly int _contextAfter = -1;
         private int _afterCounter = -1;
 
         public FileTypes FileType
@@ -124,25 +118,15 @@ namespace TailP
             }
         }
 
-        public File(string file, TailPBL bl, int fileIndex,
-                    NumLinesStart startFromType, int startFromNum,
-                    int contextAfter, int contextBefore)
+        public File(string file, TailPBL bl, int fileIndex)
         {
-            if (string.IsNullOrEmpty(file)) throw new ArgumentException("file");
-            if (bl == null) throw new ArgumentNullException("bl");
-
+            if (string.IsNullOrEmpty(file)) throw new ArgumentException(nameof(file));
+            _bl = bl ?? throw new ArgumentNullException(nameof(bl));
             _file = file;
-            _bl = bl;
             _fileIndex = fileIndex;
-            _startFromType = startFromType;
-            _startFromNum = startFromNum;
-            _contextBefore = contextBefore;
-            _contextAfter = contextAfter;
-            _logicalLinesHistory = new LogicalLinesHistory(Math.Max(1, contextBefore));
+            _logicalLinesHistory = new LogicalLinesHistory(Math.Max(1, Configuration.ContextBefore));
 
-            string archive;
-            string finalFile;
-            if (ArchiveSupport.TryGetArchivePath(file, out archive, out finalFile) &&
+            if (ArchiveSupport.TryGetArchivePath(file, out string archive, out string finalFile) &&
                 ArchiveSupport.IsValidArchive(archive))
             {
                 _fileType = finalFile == string.Empty
@@ -206,7 +190,7 @@ namespace TailP
             FlushLogicalLine();
             ShowError(error);
 
-            if (_bl.Follow)
+            if (Configuration.Follow)
             {
                 ResetCounters();
             }
@@ -237,26 +221,19 @@ namespace TailP
             }
         }
 
-        private int ContextLines
-        {
-            get
-            {
-                return Math.Max(0, _contextBefore) + Math.Max(0, _contextAfter);
-            }
-        }
-
         private bool _lastLinesProcessed = false;
         private void FindLastLinesInStream(Stream stream)
         {
             if (_lastLinesProcessed ||
-                _startFromType != NumLinesStart.end)
+                Configuration.LinesStartFrom != NumLinesStart.end)
             {
                 return;
             }
 
             if (_startFromNum != 0)
             {
-                var logicalLinesHistory = new LogicalLinesHistory(_startFromNum * (ContextLines + 1));
+                var logicalLinesHistory = new LogicalLinesHistory(
+                    _startFromNum * (Configuration.ContextLines + 1));
                 if (stream.CanSeek)
                 {
                     if (!ProcessStreamInPages(stream, logicalLinesHistory))
@@ -309,32 +286,23 @@ namespace TailP
 
         private Encoding DetectEncoding(Stream stream)
         {
-            using (var sr = new StreamReader(stream, Encoding.Default, true, PAGE_SIZE, true))
+            using (var sr = new StreamReader(stream, Encoding.Default, true,
+                Constants.REVERS_SEARCH_PAGE_SIZE, true))
             {
                 sr.Peek();
                 return sr.CurrentEncoding;
             }
         }
 
-        private bool CanProcessInPages()
-        {
-            // nonsense to process in pages
-            if (FileSize <= PAGE_SIZE)
-            {
-                return false;
-            }
+        private bool CanProcessInPages() =>
+                // process in pages only if makes sense
+                FileSize > Constants.REVERS_SEARCH_PAGE_SIZE &&
 
-            // NOTE: it seems quite complicate to store the before context,
-            //       when file is reading in pages from end to begin.
-            //       for the moment, disable the optimization when before context
-            //       is needed
-            if (IsContextBeforeUsed)
-            {
-                return false;
-            }
-
-            return true;
-        }
+                // NOTE: it seems quite complicate to store the before context,
+                //       when file is reading in pages from end to begin.
+                //       for the moment, disable the optimization when before context
+                //       is needed
+                (!Configuration.IsContextBeforeUsed);
 
         // Optimization used:
         //       read from end in pages by XXX bytes to a memory stream
@@ -349,18 +317,18 @@ namespace TailP
             }
 
             var encoding = DetectEncoding(stream);
-            var historyDeep = _startFromNum * (ContextLines + 1);
+            var historyDeep = _startFromNum * (Configuration.ContextLines + 1);
             var foundLines = new LogicalLinesHistory(historyDeep);
             var from = FileSize;
 
             while (from != 0 && foundLines.Count != historyDeep)
             {
-                var buf = new byte[PAGE_SIZE];
+                var buf = new byte[Constants.REVERS_SEARCH_PAGE_SIZE];
                 var pageLines = new LogicalLinesHistory(historyDeep);
 
-                from = Math.Max(0, from - PAGE_SIZE);
+                from = Math.Max(0, from - Constants.REVERS_SEARCH_PAGE_SIZE);
                 stream.Seek(from, SeekOrigin.Begin);
-                var sz = stream.Read(buf, 0, PAGE_SIZE);
+                var sz = stream.Read(buf, 0, Constants.REVERS_SEARCH_PAGE_SIZE);
 
                 Stream ms = null;
                 try
@@ -376,7 +344,7 @@ namespace TailP
                         {
                             var nul = sr.ReadLine(); // ignore first line, may be incomplete
                             var szBytes = encoding.GetByteCount(nul);
-                            if (szBytes >= PAGE_SIZE) // extra long line
+                            if (szBytes >= Constants.REVERS_SEARCH_PAGE_SIZE) // extra long line
                             {
                                 return false;
                             }
@@ -386,7 +354,7 @@ namespace TailP
                         var s = sr.ReadLine();
                         while (s != null)
                         {
-                            if (encoding.GetByteCount(s) >= PAGE_SIZE)
+                            if (encoding.GetByteCount(s) >= Constants.REVERS_SEARCH_PAGE_SIZE)
                             {
                                 return false;
                             }
@@ -429,7 +397,7 @@ namespace TailP
                     FlushLogicalLine();
                 }
             },
-            null, LOGICAL_LINE_DELAY, TimeSpan.FromMilliseconds(-1));
+            null, Constants.LOGICAL_LINE_DELAY, TimeSpan.FromMilliseconds(-1));
         }
 
         private void DisposeNoProcessTimer()
@@ -540,9 +508,9 @@ namespace TailP
         private void ProcessReadLine(string readLine, LogicalLinesHistory logicalLinesHistory)
         {
             var isLogicalContinuation =
-                readLine.Length < _bl.LogicalLineMarker.Length ||
-                readLine.Substring(0, _bl.LogicalLineMarker.Length).IndexOf(
-                    _bl.LogicalLineMarker, _bl.ComparisonOptions) == -1;
+                readLine.Length < Configuration.LogicalLineMarker.Length ||
+                readLine.Substring(0, Configuration.LogicalLineMarker.Length).IndexOf(
+                    Configuration.LogicalLineMarker, Configuration.ComparisonOptions) == -1;
 
             if (!isLogicalContinuation) // a new line begins, flush memory
             {
@@ -550,9 +518,9 @@ namespace TailP
                 FlushLogicalLine(logicalLinesHistory);
             }
 
-            var line = new Line(readLine, _bl.ComparisonOptions, _bl.Regex,
+            var line = new Line(readLine, Configuration.ComparisonOptions, Configuration.Regex,
                 isLogicalContinuation, _lineNumber);
-            line.CheckFilters(_bl.FiltersShow, _bl.FiltersHide, _bl.FiltersHighlight);
+            line.CheckFilters(Configuration.FiltersShow, Configuration.FiltersHide, Configuration.FiltersHighlight);
             AddLineNumberIfApplicable(line);
             TruncateIfApplicable(line);
             _logicalLine.Add(line);
@@ -560,46 +528,46 @@ namespace TailP
 
         private long GetLastLocation()
         {
-            switch (_bl.StartLocationType)
+            switch (Configuration.StartLocationType)
             {
                 case StartLocationTypes.b:
-                    return _bl.StartLocation;
+                    return Configuration.StartLocation;
                 case StartLocationTypes.p:
-                    return _bl.StartLocation * FileSize / 100;
+                    return Configuration.StartLocation * FileSize / 100;
                 default:
                     throw new InvalidOperationException(string.Format(
-                        "Invalid _startLocationType {0}", _bl.StartLocationType));
+                        "Invalid _startLocationType {0}", Configuration.StartLocationType));
             }
         }
 
         private bool ShouldBeHided()
         {
-            if (!_bl.FiltersHide.Any())
+            if (!Configuration.FiltersHide.Any())
             {
                 return false;
             }
 
-            return _bl.AllFilters ?
-                        _logicalLine.FoundHideFiltersCount == _bl.FiltersHide.Count :
+            return Configuration.AllFilters ?
+                        _logicalLine.FoundHideFiltersCount == Configuration.FiltersHide.Count :
                         _logicalLine.IsHidedFlagExists;
         }
 
         private bool ShouldBeShown()
         {
-            if (!_bl.FiltersShow.Any())
+            if (!Configuration.FiltersShow.Any())
             {
                 return true;
             }
 
-            return _bl.AllFilters ?
-                        _logicalLine.FoundShowFiltersCount == _bl.FiltersShow.Count :
+            return Configuration.AllFilters ?
+                        _logicalLine.FoundShowFiltersCount == Configuration.FiltersShow.Count :
                         _logicalLine.IsShowedFlagExists;
         }
 
         private bool SkipFromNumLines()
         {
             var mustSkip =
-                _startFromType == NumLinesStart.begin &&
+                Configuration.LinesStartFrom == NumLinesStart.begin &&
                 _startFromNum > 0 &&
                 _logicalLine.IsVisible;
 
@@ -638,7 +606,7 @@ namespace TailP
 
                 if (_logicalLine.IsVisible)
                 {
-                    _afterCounter = _contextAfter;
+                    _afterCounter = Configuration.ContextAfter;
                 }
             }
 
@@ -650,30 +618,6 @@ namespace TailP
         {
             _bl.PrintFileName(FileName, _isFilenameNeeded);
             _isFilenameNeeded = false;
-        }
-
-        private bool IsContextBeforeUsed
-        {
-            get
-            {
-                return _contextBefore > 0;
-            }
-        }
-
-        private bool IsContextAfterUsed
-        {
-            get
-            {
-                return _contextAfter > 0;
-            }
-        }
-
-        private bool IsContextUsed
-        {
-            get
-            {
-                return IsContextBeforeUsed || IsContextAfterUsed;
-            }
         }
 
         private int _lastPrintedLine = 0;
@@ -689,7 +633,7 @@ namespace TailP
 
                     if (!logicalLine.IsPrinted)
                     {
-                        if (IsContextUsed &&
+                        if (Configuration.IsContextUsed &&
                             Math.Abs(logicalLine.LineNumber - _lastPrintedLine) > 1)
                         {
                             _bl.PrintLogicalLine(TailPBL.GetContextDelimiter(), _fileIndex);
@@ -704,7 +648,8 @@ namespace TailP
 
         private void PrepareLogicalLineForPrinting(LogicalLine logicalLine, LogicalLinesHistory prepared)
         {
-            if (_contextBefore >= 0 && _logicalLinesHistory.Any() &&
+            if (Configuration.IsContextBeforeUsed &&
+                _logicalLinesHistory.Any() &&
                 _logicalLine.IsVisible)
             {
                 prepared.Enqueue(_logicalLinesHistory);
@@ -721,15 +666,15 @@ namespace TailP
 
         private void TruncateIfApplicable(Line line)
         {
-            if (_bl.Truncate)
+            if (Configuration.Truncate)
             {
-                line.Truncate(_bl.MAX_WIDTH - 1 /* -1 for newline */);
+                line.Truncate(Constants.MAX_WIDTH - 1 /* -1 for newline */);
             }
         }
 
         private void AddLineNumberIfApplicable(Line line)
         {
-            if (_bl.ShowLineNumber)
+            if (Configuration.ShowLineNumber)
             {
                 line.AddLineNumber();
             }
@@ -739,14 +684,12 @@ namespace TailP
         {
             if (obj == null) return false;
 
-            var f = obj as File;
-            if (f != null)
+            if (obj is File f)
             {
                 return _file.Equals(f._file, StringComparison.InvariantCultureIgnoreCase);
             }
 
-            var s = obj as string;
-            if (s != null)
+            if (obj is string s)
             {
                 return _file.Equals(s, StringComparison.InvariantCultureIgnoreCase);
             }
@@ -754,19 +697,10 @@ namespace TailP
             return false;
         }
 
-        public override int GetHashCode()
-        {
-            return _file.GetHashCode();
-        }
+        public override int GetHashCode() => _file.GetHashCode();
 
-        public override string ToString()
-        {
-            return FileName.ToString();
-        }
+        public override string ToString() => FileName.ToString();
 
-        public void Dispose()
-        {
-            DisposeNoProcessTimer();
-        }
+        public void Dispose() => DisposeNoProcessTimer();
     }
 }

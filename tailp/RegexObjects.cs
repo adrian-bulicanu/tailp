@@ -12,9 +12,7 @@ namespace TailP
             new ConcurrentDictionary<string, Regex>();
         public static Regex GetRegexObject(string filter, Func<Regex> createRegex)
         {
-            Regex result;
-
-            if (!_regexs.TryGetValue(filter, out result))
+            if (!_regexs.TryGetValue(filter, out Regex result))
             {
                 result = createRegex.Invoke();
                 _regexs.TryAdd(filter, result);

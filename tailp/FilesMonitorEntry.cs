@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace TailP
 {
-    public class FilesMonitorEventArgs: EventArgs
+    public class FilesMonitorEventArgs : EventArgs
     {
         public string File { get; private set; }
         public object Sender { get; private set; }
@@ -19,10 +19,8 @@ namespace TailP
             File = file;
         }
 
-        public override string ToString()
-        {
-            return string.Format("file: {0}, sender: {1}", File, Sender);
-        }
+        public override string ToString() =>
+            string.Format("file: {0}, sender: {1}", File, Sender);
     }
 
     public delegate void FilesMonitorEntryHandler(object sender, FilesMonitorEventArgs e);
@@ -31,14 +29,11 @@ namespace TailP
     {
         public string Folder { get; private set; }
         public string Mask { get; private set; }
-        public bool Recursive { get; private set; }
         public FileTypes FileType { get; private set; }
 
         private readonly object _filesLock = new object();
         private readonly HashSet<string> _files =
             new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
-
-        private readonly TimeSpan WAIT_ON_ERROR = TimeSpan.FromSeconds(1);
 
         public event FilesMonitorEntryHandler Created;
         public event FilesMonitorEntryHandler Deleted;
@@ -48,11 +43,9 @@ namespace TailP
         private FileSystemWatcher _watcher = null;
         private readonly TailPBL _bl;
 
-        public FilesMonitorEntry(string path, bool recursive, TailPBL bl)
+        public FilesMonitorEntry(string path, TailPBL bl)
         {
-            string archive;
-            string file;
-            if (ArchiveSupport.TryGetArchivePath(path, out archive, out file))
+            if (ArchiveSupport.TryGetArchivePath(path, out string archive, out string file))
             {
                 FileType = FileTypes.Archive;
                 Folder = archive;
@@ -62,9 +55,8 @@ namespace TailP
             {
                 Folder = Path.GetDirectoryName(path);
                 Mask = Path.GetFileName(path);
-                FileType = IsWildcard() ? FileTypes.Wildcard : FileTypes.Regular;
+                FileType = IsWildcard ? FileTypes.Wildcard : FileTypes.Regular;
             }
-            Recursive = recursive;
 
             if (string.IsNullOrEmpty(Folder.Trim()))
             {
@@ -74,18 +66,14 @@ namespace TailP
             _bl = bl;
         }
 
-        private void ForceProcessRegular()
-        {
+        private void ForceProcessRegular() =>
             InternalCreatedOrChanged(this, Path.Combine(Folder, Mask));
-        }
 
-        private bool IsExceptionIgnored(Exception ex)
-        {
-            return ex is UnauthorizedAccessException ||
-                   ex is PathTooLongException ||
-                   ex is System.Security.SecurityException ||
-                   ex is IOException;
-        }
+        private bool IsExceptionIgnored(Exception ex) =>
+            ex is UnauthorizedAccessException ||
+            ex is PathTooLongException ||
+            ex is System.Security.SecurityException ||
+            ex is IOException;
 
         private readonly HashSet<string> _invalidPathes =
             new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
@@ -93,7 +81,7 @@ namespace TailP
         private void PrintErrorOnlyFirstTime(string path, string error)
         {
             bool isNewError;
-            lock(_invalidPathesLock)
+            lock (_invalidPathesLock)
             {
                 isNewError = _invalidPathes.Add(path);
             }
@@ -159,7 +147,9 @@ namespace TailP
             }
 
             foreach (var f in DirectoryEnumerateFiles(Folder, Mask,
-                Recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly))
+                Configuration.Recursive ?
+                    SearchOption.AllDirectories :
+                    SearchOption.TopDirectoryOnly))
             {
                 actualFiles.Remove(f);
                 InternalCreatedOrChanged(this, f);
@@ -203,10 +193,7 @@ namespace TailP
             }
         }
 
-        private bool IsWildcard()
-        {
-            return Mask.IndexOfAny(new char[] { '?', '*' }) != -1;
-        }
+        private bool IsWildcard => Mask.IndexOfAny(new char[] { '?', '*' }) != -1;
 
         private void InternalCreatedOrChanged(object sender, string file)
         {
@@ -223,19 +210,11 @@ namespace TailP
 
             if (added)
             {
-                var handler = Created;
-                if (handler != null)
-                {
-                    handler(this, new FilesMonitorEventArgs(sender, file));
-                }
+                Created?.Invoke(this, new FilesMonitorEventArgs(sender, file));
             }
             else
             {
-                var handler = Changed;
-                if (handler != null)
-                {
-                    handler(this, new FilesMonitorEventArgs(sender, file));
-                }
+                Changed?.Invoke(this, new FilesMonitorEventArgs(sender, file));
             }
         }
 
@@ -249,11 +228,7 @@ namespace TailP
 
             if (removed)
             {
-                var handler = Deleted;
-                if (handler != null)
-                {
-                    handler(this, new FilesMonitorEventArgs(sender, file));
-                }
+                Deleted?.Invoke(this, new FilesMonitorEventArgs(sender, file));
             }
         }
 
@@ -284,7 +259,7 @@ namespace TailP
 
                 _watcher.Error += (s, e) =>
                 {
-                    Task.Delay(WAIT_ON_ERROR).ContinueWith((t) =>
+                    Task.Delay(Constants.WAIT_ON_ERROR).ContinueWith((t) =>
                     {
                         lock (_watcherLock)
                         {
@@ -294,7 +269,7 @@ namespace TailP
                     });
                 };
 
-                _watcher.IncludeSubdirectories = Recursive;
+                _watcher.IncludeSubdirectories = Configuration.Recursive;
                 _watcher.EnableRaisingEvents = true;
             }
         }
@@ -323,14 +298,10 @@ namespace TailP
             var f = obj as FilesMonitorEntry;
             if (f == null) return false;
 
-            return Recursive == f.Recursive
-                && Mask.Equals(f.Mask, StringComparison.InvariantCultureIgnoreCase)
+            return Mask.Equals(f.Mask, StringComparison.InvariantCultureIgnoreCase)
                 && Folder.Equals(f.Folder, StringComparison.InvariantCultureIgnoreCase);
         }
 
-        public override int GetHashCode()
-        {
-            return Recursive.GetHashCode() ^ Mask.GetHashCode() ^ Folder.GetHashCode();
-        }
+        public override int GetHashCode() => Mask.GetHashCode() ^ Folder.GetHashCode();
     }
 }

@@ -10,8 +10,8 @@ namespace TailP
     public static class FilesMonitor
     {
         private static object _monitorEntriesLock = new object();
-        private static HashSet<FilesMonitorEntry> _monitorEntries = new HashSet<FilesMonitorEntry>();
-        public static bool Recursive { get; set; }
+        private static HashSet<FilesMonitorEntry> _monitorEntries =
+            new HashSet<FilesMonitorEntry>();
 
 #pragma warning disable S3264 // Events should be invoked
         public static event FilesMonitorEntryHandler Created;
@@ -35,7 +35,7 @@ namespace TailP
 
         public static void Add(string path, bool follow, TailPBL bl)
         {
-            var entry = new FilesMonitorEntry(path, Recursive, bl);
+            var entry = new FilesMonitorEntry(path, bl);
 
             var added = false;
             lock (_monitorEntriesLock)

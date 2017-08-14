@@ -8,52 +8,6 @@ using System.Linq;
 
 namespace TailP
 {
-    public static class TimespanExtensions
-    {
-        // for idea - thanks to http://stackoverflow.com/questions/16689468/how-to-produce-human-readable-strings-to-represent-a-timespan/21649465
-        public static string ToHumanReadableString(this TimeSpan t)
-        {
-            if (t.TotalMinutes < 1)
-            {
-                return string.Format("{0} second(s)", (int)t.TotalSeconds);
-            }
-            if (t.TotalHours < 1)
-            {
-                return string.Format("{0}:{1:00} minute(s)", (int)t.TotalMinutes, t.Seconds);
-            }
-            if (t.TotalDays < 1)
-            {
-                return string.Format("{0}:{1:00} hour(s)", (int)t.TotalHours, t.Minutes);
-            }
-            if (t.TotalDays < 2)
-            {
-                return string.Format("over {0} hour(s)", (int)t.TotalHours);
-            }
-
-            return string.Format("over {0} day(s)", (int)t.TotalDays);
-        }
-    }
-
-    public static class StringExtensions
-    {
-        public static string AppendFromRight(this string s,
-            string toBeApend, int finalWidth)
-        {
-            var remains = finalWidth - s.Length;
-            if (remains > 0)
-            {
-                var index = Math.Max(toBeApend.Length - remains, 0);
-
-                if (index > 0 )
-                {
-                    s += "...";
-                }
-
-                s += toBeApend.Substring(index);
-            }
-            return s;
-        }
-    }
 
     static class Program
     {
@@ -133,7 +87,7 @@ namespace TailP
             {
                 var totalFiles = _bl.FilesCount;
                 var pendingFiles = _bl.Pending;
-                var files = _bl.Follow
+                var files = Configuration.Follow
                     ? string.Format("{0} files", totalFiles)
                     : string.Format("{0} of {1}", totalFiles - pendingFiles, totalFiles);
 
@@ -221,7 +175,7 @@ namespace TailP
 
                 _bl.StartProcess();
 
-                if (_bl.Follow)
+                if (Configuration.Follow)
                 {
                     Console.ReadLine();
                 }
@@ -263,8 +217,7 @@ namespace TailP
         static private int _lastFilterColor = _availableFilterColors.Length;
         static private ConsoleColor GetFilterBackgroundColor(int colorIndex)
         {
-            ConsoleColor color;
-            if (!_filterColors.TryGetValue(colorIndex, out color))
+            if (!_filterColors.TryGetValue(colorIndex, out ConsoleColor color))
             {
                 ++_lastFilterColor;
                 if (_lastFilterColor >= _availableFilterColors.Length)
@@ -289,8 +242,7 @@ namespace TailP
         static private int _lastFileColor = _availableFilesColors.Length;
         static private ConsoleColor GetFileForegroundColor(int fileIndex)
         {
-            ConsoleColor color;
-            if (!_fileColors.TryGetValue(fileIndex, out color))
+            if (!_fileColors.TryGetValue(fileIndex, out ConsoleColor color))
             {
                 ++_lastFileColor;
                 if (_lastFileColor >= _availableFilesColors.Length)
@@ -319,7 +271,7 @@ namespace TailP
                 case Types.FileName:
                     return ConsoleColor.DarkGray;
                 default:
-                    return _bl.Follow
+                    return Configuration.Follow
                                 ? GetFileForegroundColor(fileIndex)
                                 : DEFAULT_FOREGROUND;
             }
@@ -349,23 +301,25 @@ namespace TailP
             }
         }
 
+#pragma warning disable S3242 // Method parameters should be declared with base types
         static void WriteLine(Line line, int fileIndex)
+#pragma warning restore S3242 // Method parameters should be declared with base types
         {
             lock (_writeLineLock)
             {
-                foreach (var item in line)
+                line.ForEach(x =>
                 {
-                    if (item.Type == Types.NewLine)
+                    if (x.Type == Types.NewLine)
                     {
                         NewLine();
                     }
                     else
                     {
-                        Console.BackgroundColor = TypeToBackgroundColor(item.Type, item.ColorIndex);
-                        Console.ForegroundColor = TypeToForegroundColor(item.Type, fileIndex);
-                        Console.Write(item.Text);
+                        Console.BackgroundColor = TypeToBackgroundColor(x.Type, x.ColorIndex);
+                        Console.ForegroundColor = TypeToForegroundColor(x.Type, fileIndex);
+                        Console.Write(x.Text);
                     }
-                }
+                });
 
                 NewLine();
             }

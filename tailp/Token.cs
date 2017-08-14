@@ -12,10 +12,7 @@ namespace TailP
 
         public Token(Types type, string text)
         {
-            if (text == null)
-            {
-                throw new ArgumentNullException("text");
-            }
+            Text = text ?? throw new ArgumentNullException(nameof(text));
 
             if (type == Types.Show || type == Types.Highlight)
             {
@@ -23,19 +20,13 @@ namespace TailP
             }
 
             Type = type;
-            Text = text;
             ColorIndex = 0;
         }
 
         public Token(Types type, string text, int colorIndex)
         {
-            if (text == null)
-            {
-                throw new ArgumentNullException("text");
-            }
-
+            Text = text ?? throw new ArgumentNullException(nameof(text));
             Type = type;
-            Text = text;
             ColorIndex = colorIndex;
         }
 
@@ -49,14 +40,9 @@ namespace TailP
                    ColorIndex == other.ColorIndex;
         }
 
-        public override int GetHashCode()
-        {
-            return Type.GetHashCode() ^ Text.GetHashCode() ^ ColorIndex.GetHashCode();
-        }
+        public override int GetHashCode() =>
+            Type.GetHashCode() ^ Text.GetHashCode() ^ ColorIndex.GetHashCode();
 
-        public override string ToString()
-        {
-            return Text;
-        }
+        public override string ToString() => Text;
     }
 }

@@ -9,7 +9,7 @@ namespace TailP
     {
         public static bool IsMatchMask(string path, string mask)
         {
-            if (mask == string.Empty)
+            if (string.IsNullOrEmpty(mask))
             {
                 return true;
             }
