@@ -8,7 +8,19 @@ namespace TailP
 {
     public static class Constants
     {
-        public static readonly int MAX_WIDTH = Math.Max(1, Console.BufferWidth);
+        private static int _maxWidth = 0;
+        public static int MAX_WIDTH
+        {
+            get
+            {
+                if (_maxWidth == 0)
+                {
+                    _maxWidth = Math.Max(1, Console.BufferWidth);
+                }
+
+                return _maxWidth;
+            }
+        }
 
         // recheck file period if no file watch events received
         public static readonly TimeSpan FORCE_DETECT_PERIOD = TimeSpan.FromMilliseconds(500);
