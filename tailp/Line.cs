@@ -16,7 +16,7 @@ namespace TailP
 
         private readonly StringComparison _comparison = Configuration.ComparisonOptions;
         private readonly bool _useRegex = Configuration.Regex;
-        private readonly bool _isLogicalContinuation;
+        private readonly bool _isLogicalContinuation = false;
 
         public Line() : base()
         {
