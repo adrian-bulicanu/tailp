@@ -6,6 +6,8 @@ namespace TailP
 {
     public static class Constants
     {
+        public static readonly string CONSOLE_FILENAME = @"CON";
+
         private static int _maxWidth = 0;
         public static int MAX_WIDTH
         {

@@ -12,7 +12,7 @@ namespace TailP
     {
         private class FileInfoCache // FileInfo accesses file on each method call
         {
-            public long Length { get; private set; }
+            public long Length { get; set; }
             public DateTime CreationTime { get; private set; }
 
             /// <summary>
@@ -30,6 +30,12 @@ namespace TailP
                 var info = ArchiveSupport.GetArchivedFileInfo(archivePath);
                 Length = info.Size;
                 CreationTime = info.CreatedTime;
+            }
+
+            public FileInfoCache(long length)
+            {
+                Length = length;
+                CreationTime = DateTime.Now;
             }
         }
 
@@ -86,6 +92,20 @@ namespace TailP
                     return _fileInfo == null ? 0 : _fileInfo.Length;
                 }
             }
+
+            set
+            {
+                lock(_minorLock)
+                {
+                    if (_fileInfo == null)
+                    {
+                        _fileInfo = new FileInfoCache(value);
+                    } else
+                    {
+                        _fileInfo.Length = value;
+                    }
+                }
+            }
         }
         public DateTime FileCreationTime
         {
@@ -125,8 +145,13 @@ namespace TailP
             _file = file;
             _fileIndex = fileIndex;
             _logicalLinesHistory = new LogicalLinesHistory(Math.Max(1, Configuration.ContextBefore));
+            _startFromNum = Configuration.LinesStartNumber;
 
-            if (ArchiveSupport.TryGetArchivePath(file, out string archive, out string finalFile) &&
+            if (_file == Constants.CONSOLE_FILENAME)
+            {
+                _fileType = FileTypes.Console;
+            }
+            else if (ArchiveSupport.TryGetArchivePath(file, out string archive, out string finalFile) &&
                 ArchiveSupport.IsValidArchive(archive))
             {
                 _fileType = finalFile == string.Empty
@@ -146,6 +171,9 @@ namespace TailP
                 {
                     switch (_fileType)
                     {
+                        case FileTypes.Console:
+                            _fileInfo = new FileInfoCache(LastPos);
+                            break;
                         case FileTypes.Regular:
                             _fileInfo = new FileInfoCache(new FileInfo(_file));
                             break;
@@ -264,7 +292,19 @@ namespace TailP
 
         private void ProcessStreamFromLastPosToEnd(Stream stream, LogicalLinesHistory logicalLines)
         {
-            using (var sr = new StreamReader(stream, Encoding.Default, true))
+            var encoding = Encoding.Default;
+
+            if (FileType == FileTypes.Console)
+            {
+                if (!stream.CanRead)
+                {
+                    return;
+                }
+
+                encoding = Console.InputEncoding;
+            }
+
+            using (var sr = new StreamReader(stream, encoding, true))
             {
                 SeekToLastPos(sr);
                 var s = ReadLine(sr);
@@ -417,7 +457,7 @@ namespace TailP
             var s = sr.ReadLine();
             if (s != null)
             {
-                UpdateLastPos(sr);
+                UpdateLastPos(sr, s.Length);
             }
             return s;
         }
@@ -428,6 +468,9 @@ namespace TailP
 
             switch (_fileType)
             {
+                case FileTypes.Console:
+                    stream = Console.OpenStandardInput();
+                    break;
                 case FileTypes.Regular:
                     stream = new FileStream(_file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                     break;
@@ -462,11 +505,15 @@ namespace TailP
             }
         }
 
-        private void UpdateLastPos(StreamReader sr)
+        private void UpdateLastPos(StreamReader sr, long bytesCount)
         {
             if (sr.BaseStream.CanSeek)
             {
                 LastPos = sr.BaseStream.Position;
+            } else
+            {
+                LastPos += bytesCount;
+                FileSize = LastPos;
             }
         }
 

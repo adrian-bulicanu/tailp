@@ -7,6 +7,7 @@ namespace TailP
         Regular,
         Wildcard,
         ArchivedFile,
-        Archive
+        Archive,
+        Console
     }
 }

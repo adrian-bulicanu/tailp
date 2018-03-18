@@ -45,7 +45,13 @@ namespace TailP
 
         public FilesMonitorEntry(string path, TailPBL bl)
         {
-            if (ArchiveSupport.TryGetArchivePath(path, out string archive, out string file))
+            if (path == Constants.CONSOLE_FILENAME)
+            {
+                FileType = FileTypes.Console;
+                Folder = string.Empty;
+                Mask = Constants.CONSOLE_FILENAME;
+            }
+            else if (ArchiveSupport.TryGetArchivePath(path, out string archive, out string file))
             {
                 FileType = FileTypes.Archive;
                 Folder = archive;
@@ -58,7 +64,7 @@ namespace TailP
                 FileType = IsWildcard ? FileTypes.Wildcard : FileTypes.Regular;
             }
 
-            if (string.IsNullOrEmpty(Folder.Trim()))
+            if (string.IsNullOrEmpty(Folder.Trim()) && FileType != FileTypes.Console)
             {
                 Folder = ".";
             }
@@ -178,6 +184,7 @@ namespace TailP
         {
             switch (FileType)
             {
+                case FileTypes.Console:
                 case FileTypes.Regular:
                     ForceProcessRegular();
                     break;
@@ -234,7 +241,7 @@ namespace TailP
 
         public void BeginMonitor()
         {
-            if (FileType == FileTypes.Archive)
+            if (FileType == FileTypes.Archive || FileType == FileTypes.Console)
             {
                 return;
             }

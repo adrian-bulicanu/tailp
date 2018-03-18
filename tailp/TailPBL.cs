@@ -222,6 +222,11 @@ namespace TailP
                         break;
                 }
             }
+            if (Console.IsInputRedirected)
+            {
+                files.Add(Constants.CONSOLE_FILENAME);
+            }
+
             if (files.Any())
             {
                 files.ForEach(x => AddFile(x));

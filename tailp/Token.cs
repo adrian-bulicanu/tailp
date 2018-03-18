@@ -32,10 +32,18 @@ namespace TailP
 
         public override bool Equals(object obj)
         {
-            var other = obj as Token;
+            if (obj == null)
+            {
+                return false;
+            }
 
-            return !ReferenceEquals(obj, null) &&
-                   Type == other.Type &&
+            var other = obj as Token;
+            if (other == null)
+            {
+                return false;
+            }
+
+            return Type == other.Type &&
                    Text == other.Text &&
                    ColorIndex == other.ColorIndex;
         }
