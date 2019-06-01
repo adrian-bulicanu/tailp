@@ -8,8 +8,9 @@ namespace TailP
 {
     public static class RegexObjects
     {
-        private static ConcurrentDictionary<string, Regex> _regexs =
+        private static readonly ConcurrentDictionary<string, Regex> _regexs =
             new ConcurrentDictionary<string, Regex>();
+
         public static Regex GetRegexObject(string filter, Func<Regex> createRegex)
         {
             if (!_regexs.TryGetValue(filter, out Regex result))
@@ -20,6 +21,5 @@ namespace TailP
 
             return result;
         }
-
     }
 }

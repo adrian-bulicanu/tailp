@@ -6,9 +6,9 @@ namespace TailP
 {
     public class Token
     {
-        public Types Type { get; private set; }
+        public Types Type { get; }
         public string Text { get; set; }
-        public int ColorIndex { get; private set; }
+        public int ColorIndex { get; }
 
         public Token(Types type, string text)
         {
@@ -37,15 +37,14 @@ namespace TailP
                 return false;
             }
 
-            var other = obj as Token;
-            if (other == null)
+            if (!(obj is Token other))
             {
                 return false;
             }
 
-            return Type == other.Type &&
-                   Text == other.Text &&
-                   ColorIndex == other.ColorIndex;
+            return Type == other.Type
+                   && Text == other.Text
+                   && ColorIndex == other.ColorIndex;
         }
 
         public override int GetHashCode() =>

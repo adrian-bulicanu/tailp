@@ -10,8 +10,8 @@ namespace TailP
 {
     public class FilesMonitorEventArgs : EventArgs
     {
-        public string File { get; private set; }
-        public object Sender { get; private set; }
+        public string File { get; }
+        public object Sender { get; }
 
         public FilesMonitorEventArgs(object sender, string file)
         {
@@ -27,17 +27,20 @@ namespace TailP
 
     public sealed class FilesMonitorEntry : IDisposable
     {
-        public string Folder { get; private set; }
-        public string Mask { get; private set; }
-        public FileTypes FileType { get; private set; }
+        public string Folder { get; }
+        public string Mask { get; }
+        public FileTypes FileType { get; }
 
         private readonly object _filesLock = new object();
+
         private readonly HashSet<string> _files =
             new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
 
-        public event FilesMonitorEntryHandler Created;
-        public event FilesMonitorEntryHandler Deleted;
-        public event FilesMonitorEntryHandler Changed;
+        public event EventHandler<FilesMonitorEventArgs> Created;
+
+        public event EventHandler<FilesMonitorEventArgs> Deleted;
+
+        public event EventHandler<FilesMonitorEventArgs> Changed;
 
         private readonly object _watcherLock = new object();
         private FileSystemWatcher _watcher = null;
@@ -76,14 +79,16 @@ namespace TailP
             InternalCreatedOrChanged(this, Path.Combine(Folder, Mask));
 
         private bool IsExceptionIgnored(Exception ex) =>
-            ex is UnauthorizedAccessException ||
-            ex is PathTooLongException ||
-            ex is System.Security.SecurityException ||
-            ex is IOException;
+            ex is UnauthorizedAccessException
+            || ex is PathTooLongException
+            || ex is System.Security.SecurityException
+            || ex is IOException;
 
         private readonly HashSet<string> _invalidPathes =
             new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
+
         private readonly object _invalidPathesLock = new object();
+
         private void PrintErrorOnlyFirstTime(string path, string error)
         {
             bool isNewError;
@@ -188,12 +193,15 @@ namespace TailP
                 case FileTypes.Regular:
                     ForceProcessRegular();
                     break;
+
                 case FileTypes.Wildcard:
                     ForceProcessWildcard();
                     break;
+
                 case FileTypes.Archive:
                     ForceProcessArchive();
                     break;
+
                 default:
                     throw new InvalidOperationException(
                         string.Format("Unknown FileType {0}", FileType));
@@ -266,7 +274,7 @@ namespace TailP
 
                 _watcher.Error += (s, e) =>
                 {
-                    Task.Delay(Constants.WAIT_ON_ERROR).ContinueWith((t) =>
+                    Task.Delay(Constants.WAIT_ON_ERROR).ContinueWith((_) =>
                     {
                         lock (_watcherLock)
                         {
@@ -302,8 +310,7 @@ namespace TailP
         {
             if (obj == null) return false;
 
-            var f = obj as FilesMonitorEntry;
-            if (f == null) return false;
+            if (!(obj is FilesMonitorEntry f)) return false;
 
             return Mask.Equals(f.Mask, StringComparison.InvariantCultureIgnoreCase)
                 && Folder.Equals(f.Folder, StringComparison.InvariantCultureIgnoreCase);

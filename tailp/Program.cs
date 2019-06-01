@@ -3,19 +3,19 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading;
 using System.Linq;
+using System.Threading;
 
 namespace TailP
 {
-
-    static class Program
+    internal static class Program
     {
         // used hardcoded colors instead of default, because on Ctrl-C color changes to last used
-        static private readonly ConsoleColor DEFAULT_BACKGROUND = ConsoleColor.Black;
-        static private readonly ConsoleColor DEFAULT_FOREGROUND = ConsoleColor.Gray;
+        private const ConsoleColor DEFAULT_BACKGROUND = ConsoleColor.Black;
 
-        static private readonly int STATUS_TIMER_PERIOD_MS = 1000;
+        private const ConsoleColor DEFAULT_FOREGROUND = ConsoleColor.Gray;
+
+        private const int STATUS_TIMER_PERIOD_MS = 1000;
 
         static private Timer _statusTimer;
         static private long _lastPos = 0;
@@ -49,10 +49,7 @@ namespace TailP
         static private void StartUpdatingStatus()
         {
             _statusTimer = new Timer(
-                (s) =>
-                {
-                    UpdateStatus();
-                }, null, 0, STATUS_TIMER_PERIOD_MS);
+                (_) => UpdateStatus(), null, 0, STATUS_TIMER_PERIOD_MS);
         }
 
         static private void UpdateProgressBar(byte percents)
@@ -108,8 +105,9 @@ namespace TailP
 
         static private DateTime _lastCalculate = DateTime.UtcNow;
         static private byte _lastPercents = 100;
-        static private Queue<double> _secondsPerPercent = new Queue<double>();
-        static readonly int SAMPLES_COUNT = 5;
+        static private readonly Queue<double> _secondsPerPercent = new Queue<double>();
+        private const int SAMPLES_COUNT = 5;
+
         private static string GetETAText(byte percents)
         {
             if (_lastPercents != percents)
@@ -117,8 +115,8 @@ namespace TailP
                 if (_lastPercents < percents)
                 {
                     double speed =
-                    1.0 * (DateTime.UtcNow - _lastCalculate).TotalSeconds /
-                    (percents - _lastPercents); //-V3064
+                    1.0 * (DateTime.UtcNow - _lastCalculate).TotalSeconds
+                    / (percents - _lastPercents); //-V3064
 
                     _secondsPerPercent.Enqueue(speed);
                 }
@@ -159,10 +157,10 @@ namespace TailP
 
         static private TailPBL _bl;
 
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             // reset colors on Ctrl+C
-            Console.CancelKeyPress += (s, a) => { ResetConsoleColors(); };
+            Console.CancelKeyPress += (s, a) => ResetConsoleColors();
 
             NewLine();
 
@@ -202,7 +200,7 @@ namespace TailP
             }
         }
 
-        static private ConsoleColor[] _availableFilterColors = new ConsoleColor[]
+        static private readonly ConsoleColor[] _availableFilterColors = new ConsoleColor[]
         {
             ConsoleColor.Yellow,
             ConsoleColor.Green,
@@ -213,8 +211,10 @@ namespace TailP
             ConsoleColor.DarkCyan,
             ConsoleColor.DarkMagenta
         };
-        static private Dictionary<int, ConsoleColor> _filterColors = new Dictionary<int, ConsoleColor>();
+
+        static private readonly Dictionary<int, ConsoleColor> _filterColors = new Dictionary<int, ConsoleColor>();
         static private int _lastFilterColor = _availableFilterColors.Length;
+
         static private ConsoleColor GetFilterBackgroundColor(int colorIndex)
         {
             if (!_filterColors.TryGetValue(colorIndex, out ConsoleColor color))
@@ -230,7 +230,7 @@ namespace TailP
             return color;
         }
 
-        static private ConsoleColor[] _availableFilesColors = new ConsoleColor[]
+        static private readonly ConsoleColor[] _availableFilesColors = new ConsoleColor[]
         {
             ConsoleColor.Gray,
             ConsoleColor.Yellow,
@@ -238,8 +238,10 @@ namespace TailP
             ConsoleColor.Cyan,
             ConsoleColor.Magenta,
         };
-        static private Dictionary<int, ConsoleColor> _fileColors = new Dictionary<int, ConsoleColor>();
+
+        static private readonly Dictionary<int, ConsoleColor> _fileColors = new Dictionary<int, ConsoleColor>();
         static private int _lastFileColor = _availableFilesColors.Length;
+
         static private ConsoleColor GetFileForegroundColor(int fileIndex)
         {
             if (!_fileColors.TryGetValue(fileIndex, out ConsoleColor color))
@@ -255,21 +257,25 @@ namespace TailP
             return color;
         }
 
-        static ConsoleColor TypeToForegroundColor(Types type, int fileIndex)
+        private static ConsoleColor TypeToForegroundColor(Types type, int fileIndex)
         {
-            switch(type)
+            switch (type)
             {
                 case Types.Highlight:
                 case Types.Show:
                     return ConsoleColor.Black;
+
                 case Types.Truncated:
                     return ConsoleColor.Red;
+
                 case Types.Error:
                     TaskbarProgress.SetState(TaskbarStates.Error);
                     return ConsoleColor.Red;
+
                 case Types.LineNumber:
                 case Types.FileName:
                     return ConsoleColor.DarkGray;
+
                 default:
                     return Configuration.Follow
                                 ? GetFileForegroundColor(fileIndex)
@@ -277,22 +283,25 @@ namespace TailP
             }
         }
 
-        static ConsoleColor TypeToBackgroundColor(Types type, int colorIndex)
+        private static ConsoleColor TypeToBackgroundColor(Types type, int colorIndex)
         {
             switch (type)
             {
                 case Types.Show:
                 case Types.Highlight:
                     return GetFilterBackgroundColor(colorIndex);
+
                 case Types.Truncated:
                     return ConsoleColor.DarkRed;
+
                 default:
                     return DEFAULT_BACKGROUND;
             }
         }
 
-        static object _writeLineLock = new object();
-        static void NewLine()
+        private static readonly object _writeLineLock = new object();
+
+        private static void NewLine()
         {
             lock (_writeLineLock)
             {
@@ -302,7 +311,8 @@ namespace TailP
         }
 
 #pragma warning disable S3242 // Method parameters should be declared with base types
-        static void WriteLine(Line line, int fileIndex)
+
+        private static void WriteLine(Line line, int fileIndex)
 #pragma warning restore S3242 // Method parameters should be declared with base types
         {
             lock (_writeLineLock)
@@ -325,11 +335,10 @@ namespace TailP
             }
         }
 
-        static void WriteMessage(string mess, Types type)
+        private static void WriteMessage(string mess, Types type)
         {
             lock (_writeLineLock)
             {
-
                 Console.ForegroundColor = TypeToForegroundColor(type, 0);
                 Console.BackgroundColor = TypeToBackgroundColor(type, 0);
                 Console.WriteLine(mess);

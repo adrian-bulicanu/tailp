@@ -27,19 +27,20 @@ namespace TailP
         public static bool IsContextAfterUsed => ContextAfter > 0;
         public static bool IsContextUsed => IsContextBeforeUsed || IsContextAfterUsed;
 
-        public static List<string> FiltersShow { get; private set; } = new List<string>();
-        public static List<string> FiltersHide { get; private set; } = new List<string>();
-        public static List<string> FiltersHighlight { get; private set; } = new List<string>();
+        public static List<string> FiltersShow { get; } = new List<string>();
+        public static List<string> FiltersHide { get; } = new List<string>();
+        public static List<string> FiltersHighlight { get; } = new List<string>();
 
         private static readonly object _showFileLocker = new object();
-        private static bool? _showFile = null;
+        private static bool? _showFile;
+
         public static bool ShowFile
         {
             get
             {
                 lock (_showFileLocker)
                 {
-                    return _showFile.HasValue && _showFile.Value;
+                    return _showFile == true;
                 }
             }
             set
@@ -50,6 +51,7 @@ namespace TailP
                 }
             }
         }
+
         public static bool IsShowFileDefined
         {
             get

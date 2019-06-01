@@ -13,7 +13,7 @@ namespace TailP
             {
                 var index = Math.Max(toBeApend.Length - remains, 0);
 
-                if (index > 0 )
+                if (index > 0)
                 {
                     s += "...";
                 }

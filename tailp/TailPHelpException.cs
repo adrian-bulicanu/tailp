@@ -6,7 +6,7 @@ using System.Runtime.Serialization;
 namespace TailP
 {
     [Serializable]
-    class TailPHelpException : TailPException
+    internal class TailPHelpException : TailPException
     {
         public TailPHelpException()
         {

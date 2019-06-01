@@ -11,6 +11,7 @@ using System.Threading;
 namespace TailP
 {
 #pragma warning disable S101 // Types should be named in camel case
+
     public sealed class TailPBL : IDisposable
 #pragma warning restore S101 // Types should be named in camel case
     {
@@ -30,15 +31,18 @@ namespace TailP
         private readonly AutoResetEvent _processEvent = new AutoResetEvent(false);
         private readonly ConcurrentQueue<File> _pollFilesToBeProcess = new ConcurrentQueue<File>();
         private readonly ConcurrentQueue<File> _pushFilesToBeProcess = new ConcurrentQueue<File>();
+
         // hashset<File> should be used here, but where is no way to get fast a element from hashset
         private readonly ConcurrentDictionary<string, File> _files =
             new ConcurrentDictionary<string, File>(StringComparer.CurrentCultureIgnoreCase);
+
         private int _lastFileIndex = 0;
-        public object PrintLock { get; private set; }
-        public NewLineFunc NewLineCallback { get; private set; }
+        public object PrintLock { get; }
+        public NewLineFunc NewLineCallback { get; }
 
         private readonly object _lastFileLock = new object();
         private File _lastFile;
+
         public File LastFile
         {
             get
@@ -58,31 +62,11 @@ namespace TailP
                 }
             }
         }
-        public long LastProcessed
-        {
-            get
-            {
-                lock (_lastFileLock)
-                {
-                    return _lastFile == null ? 0 : _lastFile.LastPos;
-                }
-            }
-        }
+
         public long TotalProcessed =>
             _files
                 .Where(x => x.Value.FileType != FileTypes.Archive)
                 .Sum(x => x.Value.LastPos);
-
-        public long LastFileSize
-        {
-            get
-            {
-                lock (_lastFileLock)
-                {
-                    return _lastFile == null ? 0 : _lastFile.FileSize;
-                }
-            }
-        }
 
         public long TotalFilesSize => _files.Sum(x => x.Value.FileSize);
 
@@ -138,85 +122,103 @@ namespace TailP
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
                         ParseStartLocation(args[i]);
                         break;
+
                     case "-f":
                     case "--follow":
                         Configuration.Follow = true;
                         break;
+
                     case "-n":
                     case "--lines":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
                         ParseNumLines(args[i]);
                         break;
+
                     case "-q":
                     case "--quiet":
                     case "--silent":
                         Configuration.ShowFile = false;
                         break;
+
                     case "-v":
                     case "--verbose":
                         Configuration.ShowFile = true;
                         break;
+
                     case "-nr":
                     case "--non-recursive":
                         Configuration.Recursive = false;
                         break;
+
                     case "-l":
                     case "--logical-lines":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
                         Configuration.LogicalLineMarker = args[i];
                         break;
+
                     case "-N":
                     case "--line-number":
                         Configuration.ShowLineNumber = true;
                         break;
+
                     case "-R":
                     case "--regex":
                         Configuration.Regex = true;
                         break;
+
                     case "-S":
                     case "--show":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
                         Configuration.FiltersShow.Add(args[i]);
                         break;
+
                     case "-H":
                     case "--hide":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
                         Configuration.FiltersHide.Add(args[i]);
                         break;
+
                     case "-L":
                     case "--highlight":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
                         Configuration.FiltersHighlight.Add(args[i]);
                         break;
+
                     case "-o":
                     case "--comparison-option":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
                         ParseComparisonOption(args[i]);
                         break;
+
                     case "-a":
                     case "--all":
                         Configuration.AllFilters = true;
                         break;
+
                     case "-t":
                     case "--truncate":
                         Configuration.Truncate = true;
                         break;
+
                     case "-A":
                     case "--after-context":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
                         Configuration.ContextAfter = ParseAndGetContextNumber(args[i]);
                         break;
+
                     case "-B":
                     case "--before-context":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
                         Configuration.ContextBefore = ParseAndGetContextNumber(args[i]);
                         break;
+
                     case "-C":
                     case "--context":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
                         Configuration.ContextAfter =
                             Configuration.ContextBefore = ParseAndGetContextNumber(args[i]);
                         break;
+
                     default:
                         files.Add(args[i]);
                         break;
@@ -227,7 +229,9 @@ namespace TailP
                 files.Add(Constants.CONSOLE_FILENAME);
             }
 
+#pragma warning disable RCS1080 // Use 'Count/Length' property instead of 'Any' method.
             if (files.Any())
+#pragma warning restore RCS1080 // Use 'Count/Length' property instead of 'Any' method.
             {
                 files.ForEach(x => AddFile(x));
             }
@@ -239,6 +243,7 @@ namespace TailP
 
         private DateTime _lastForceDetect = DateTime.MinValue;
         private bool _firstTimeDetect = true;
+
         private void ForceDetect()
         {
             if (_lastForceDetect.Add(Constants.FORCE_DETECT_PERIOD) > DateTime.UtcNow)
@@ -305,15 +310,15 @@ namespace TailP
                          i != Constants.MAX_PUSH_PROCESS_COUNT && _pushFilesToBeProcess.Any();
                          ++i)
                 {
-                    if (_pushFilesToBeProcess.TryDequeue(out File pushFile) &&
-                        pushFile.FileType != FileTypes.Archive)
+                    if (_pushFilesToBeProcess.TryDequeue(out File pushFile)
+                        && pushFile.FileType != FileTypes.Archive)
                     {
                         pushFile.Process();
                     }
                 }
 
-                if (_pollFilesToBeProcess.TryDequeue(out File pollFile) &&
-                    pollFile.FileType != FileTypes.Archive)
+                if (_pollFilesToBeProcess.TryDequeue(out File pollFile)
+                    && pollFile.FileType != FileTypes.Archive)
                 {
                     pollFile.Process();
                 }
@@ -357,20 +362,12 @@ namespace TailP
             }
         }
 
-        private void Changed(object sender, FilesMonitorEventArgs e)
-        {
-            Created(this, e);
-        }
+        private void Changed(object sender, FilesMonitorEventArgs e) => Created(this, e);
 
-        private void Deleted(object sender, FilesMonitorEventArgs e)
-        {
-            _files.TryRemove(e.File, out File file);
-        }
+        private void Deleted(object sender, FilesMonitorEventArgs e) =>
+            _files.TryRemove(e.File, out _);
 
-        private void UpdateStatus(string s)
-        {
-            Console.Title = s;
-        }
+        private void UpdateStatus(string s) => Console.Title = s;
 
         private void AddFile(string pathMask)
         {
@@ -409,9 +406,9 @@ namespace TailP
         {
             var num = context.Trim().ToLower();
 
-            if (num.Length > 0 &&
-                int.TryParse(num, out int number) &&
-                number > 0)
+            if (num.Length > 0
+                && int.TryParse(num, out int number)
+                && number > 0)
             {
                 return number;
             }
@@ -491,6 +488,7 @@ namespace TailP
         }
 
         private string _lastPrintedFileName = string.Empty;
+
         public void PrintFileName(string fileName, bool force)
         {
             if (Configuration.ShowFile && (force || _lastPrintedFileName != fileName))

@@ -22,9 +22,8 @@ namespace tailpTests
             var expResult = true;
             var expArchive = @"..\..\TestFiles\1.zip";
             var expFile = string.Empty;
-
-            var actArchive = string.Empty;
-            var actFile = string.Empty;
+            string actArchive;
+            string actFile;
             var actResult = ArchiveSupport.TryGetArchivePath(path, out actArchive, out actFile);
 
             Assert.AreEqual(expResult, actResult);
@@ -40,9 +39,8 @@ namespace tailpTests
             var expResult = true;
             var expArchive = @"..\..\TestFiles\1.zip";
             var expFile = string.Empty;
-
-            var actArchive = string.Empty;
-            var actFile = string.Empty;
+            string actArchive;
+            string actFile;
             var actResult = ArchiveSupport.TryGetArchivePath(path, out actArchive, out actFile);
 
             Assert.AreEqual(expResult, actResult);
@@ -58,9 +56,8 @@ namespace tailpTests
             var expResult = true;
             var expArchive = @"..\..\TestFiles\1.zip";
             var expFile = @"1\3\Annotations.cs";
-
-            var actArchive = string.Empty;
-            var actFile = string.Empty;
+            string actArchive;
+            string actFile;
             var actResult = ArchiveSupport.TryGetArchivePath(path, out actArchive, out actFile);
 
             Assert.AreEqual(expResult, actResult);
@@ -74,9 +71,8 @@ namespace tailpTests
             string path = @"..\..\TestFiles\1.txt\1\3\Annotations.cs";
 
             var expResult = false;
-
-            var actArchive = string.Empty;
-            var actFile = string.Empty;
+            string actArchive;
+            string actFile;
             var actResult = ArchiveSupport.TryGetArchivePath(path, out actArchive, out actFile);
 
             Assert.AreEqual(expResult, actResult);
@@ -90,9 +86,8 @@ namespace tailpTests
             var expResult = true;
             var expArchive = @"..\..\TestFiles\1.zip";
             var expFile = @"*.cs";
-
-            var actArchive = string.Empty;
-            var actFile = string.Empty;
+            string actArchive;
+            string actFile;
             var actResult = ArchiveSupport.TryGetArchivePath(path, out actArchive, out actFile);
 
             Assert.AreEqual(expResult, actResult);

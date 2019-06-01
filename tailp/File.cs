@@ -13,7 +13,7 @@ namespace TailP
         private class FileInfoCache // FileInfo accesses file on each method call
         {
             public long Length { get; set; }
-            public DateTime CreationTime { get; private set; }
+            public DateTime CreationTime { get; }
 
             /// <summary>
             /// See exceptions of FileInfo class
@@ -65,6 +65,7 @@ namespace TailP
                 }
             }
         }
+
         public long LastPos
         {
             get
@@ -83,6 +84,7 @@ namespace TailP
                 }
             }
         }
+
         public long FileSize
         {
             get
@@ -95,18 +97,20 @@ namespace TailP
 
             set
             {
-                lock(_minorLock)
+                lock (_minorLock)
                 {
                     if (_fileInfo == null)
                     {
                         _fileInfo = new FileInfoCache(value);
-                    } else
+                    }
+                    else
                     {
                         _fileInfo.Length = value;
                     }
                 }
             }
         }
+
         public DateTime FileCreationTime
         {
             get
@@ -117,6 +121,7 @@ namespace TailP
                 }
             }
         }
+
         public string FileName
         {
             get
@@ -127,6 +132,7 @@ namespace TailP
                 }
             }
         }
+
         public int FileIndex
         {
             get
@@ -151,10 +157,10 @@ namespace TailP
             {
                 _fileType = FileTypes.Console;
             }
-            else if (ArchiveSupport.TryGetArchivePath(file, out string archive, out string finalFile) &&
-                ArchiveSupport.IsValidArchive(archive))
+            else if (ArchiveSupport.TryGetArchivePath(file, out string archive, out string finalFile)
+                && ArchiveSupport.IsValidArchive(archive))
             {
-                _fileType = finalFile == string.Empty
+                _fileType = string.IsNullOrWhiteSpace(finalFile)
                             ? FileTypes.Archive
                             : FileTypes.ArchivedFile;
             }
@@ -174,15 +180,18 @@ namespace TailP
                         case FileTypes.Console:
                             _fileInfo = new FileInfoCache(LastPos);
                             break;
+
                         case FileTypes.Regular:
                             _fileInfo = new FileInfoCache(new FileInfo(_file));
                             break;
+
                         case FileTypes.ArchivedFile:
                             if (_fileInfo == null)
                             {
                                 _fileInfo = new FileInfoCache(_file);
                             }
                             break;
+
                         default:
                             throw new InvalidOperationException(
                                 string.Format("Unknown FileType {0}", _fileType));
@@ -241,19 +250,17 @@ namespace TailP
                 }
                 finally
                 {
-                    if (stream != null)
-                    {
-                        stream.Dispose();
-                    }
+                    stream?.Dispose();
                 }
             }
         }
 
         private bool _lastLinesProcessed = false;
+
         private void FindLastLinesInStream(Stream stream)
         {
-            if (_lastLinesProcessed ||
-                Configuration.LinesStartFrom != NumLinesStart.end)
+            if (_lastLinesProcessed
+                || Configuration.LinesStartFrom != NumLinesStart.end)
             {
                 return;
             }
@@ -336,13 +343,13 @@ namespace TailP
 
         private bool CanProcessInPages() =>
                 // process in pages only if makes sense
-                FileSize > Constants.REVERS_SEARCH_PAGE_SIZE &&
+                FileSize > Constants.REVERS_SEARCH_PAGE_SIZE
 
                 // NOTE: it seems quite complicate to store the before context,
                 //       when file is reading in pages from end to begin.
                 //       for the moment, disable the optimization when before context
                 //       is needed
-                (!Configuration.IsContextBeforeUsed);
+                && (!Configuration.IsContextBeforeUsed);
 
         // Optimization used:
         //       read from end in pages by XXX bytes to a memory stream
@@ -405,10 +412,7 @@ namespace TailP
                 }
                 finally
                 {
-                    if (ms != null)
-                    {
-                        ms.Dispose();
-                    }
+                    ms?.Dispose();
                 }
                 FlushLogicalLine(pageLines);
                 pageLines.Enqueue(foundLines);
@@ -426,9 +430,10 @@ namespace TailP
         }
 
         private Timer _noProcessTimer = null;
+
         private void CreateNoProcessTimer()
         {
-            _noProcessTimer = new Timer((s) =>
+            _noProcessTimer = new Timer((_) =>
             {
                 lock (_processLock)
                 {
@@ -464,19 +469,21 @@ namespace TailP
 
         private Stream GetStream()
         {
-            Stream stream = null;
-
+            Stream stream;
             switch (_fileType)
             {
                 case FileTypes.Console:
                     stream = Console.OpenStandardInput();
                     break;
+
                 case FileTypes.Regular:
                     stream = new FileStream(_file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                     break;
+
                 case FileTypes.ArchivedFile:
                     stream = ArchiveSupport.GetFileStream(_file);
                     break;
+
                 default:
                     throw new InvalidOperationException(
                         string.Format("Invalid _fileType {0}", _fileType));
@@ -510,7 +517,8 @@ namespace TailP
             if (sr.BaseStream.CanSeek)
             {
                 LastPos = sr.BaseStream.Position;
-            } else
+            }
+            else
             {
                 LastPos += bytesCount;
                 FileSize = LastPos;
@@ -534,6 +542,7 @@ namespace TailP
         }
 
         private readonly object _errorShownLock = new object();
+
         private void ShowError(string error)
         {
             bool showError;
@@ -555,8 +564,8 @@ namespace TailP
         private void ProcessReadLine(string readLine, LogicalLinesHistory logicalLinesHistory)
         {
             var isLogicalContinuation =
-                readLine.Length < Configuration.LogicalLineMarker.Length ||
-                readLine.Substring(0, Configuration.LogicalLineMarker.Length).IndexOf(
+                readLine.Length < Configuration.LogicalLineMarker.Length
+                || readLine.Substring(0, Configuration.LogicalLineMarker.Length).IndexOf(
                     Configuration.LogicalLineMarker, Configuration.ComparisonOptions) == -1;
 
             if (!isLogicalContinuation) // a new line begins, flush memory
@@ -579,8 +588,10 @@ namespace TailP
             {
                 case StartLocationTypes.b:
                     return Configuration.StartLocation;
+
                 case StartLocationTypes.p:
                     return Configuration.StartLocation * FileSize / 100;
+
                 default:
                     throw new InvalidOperationException(string.Format(
                         "Invalid _startLocationType {0}", Configuration.StartLocationType));
@@ -589,7 +600,9 @@ namespace TailP
 
         private bool ShouldBeHided()
         {
+#pragma warning disable RCS1080 // Use 'Count/Length' property instead of 'Any' method.
             if (!Configuration.FiltersHide.Any())
+#pragma warning restore RCS1080 // Use 'Count/Length' property instead of 'Any' method.
             {
                 return false;
             }
@@ -601,7 +614,9 @@ namespace TailP
 
         private bool ShouldBeShown()
         {
+#pragma warning disable RCS1080 // Use 'Count/Length' property instead of 'Any' method.
             if (!Configuration.FiltersShow.Any())
+#pragma warning restore RCS1080 // Use 'Count/Length' property instead of 'Any' method.
             {
                 return true;
             }
@@ -614,9 +629,9 @@ namespace TailP
         private bool SkipFromNumLines()
         {
             var mustSkip =
-                Configuration.LinesStartFrom == NumLinesStart.begin &&
-                _startFromNum > 0 &&
-                _logicalLine.IsVisible;
+                Configuration.LinesStartFrom == NumLinesStart.begin
+                && _startFromNum > 0
+                && _logicalLine.IsVisible;
 
             if (mustSkip)
             {
@@ -636,8 +651,8 @@ namespace TailP
             _logicalLine.IsVisible = !ShouldBeHided() && ShouldBeShown();
 
             if (
-                (_logicalLine.IsVisible || _afterCounter > 0) &&
-                !SkipFromNumLines())
+                (_logicalLine.IsVisible || _afterCounter > 0)
+                && !SkipFromNumLines())
             {
                 var forPrinting = new LogicalLinesHistory();
                 PrepareLogicalLineForPrinting(_logicalLine, forPrinting);
@@ -668,6 +683,7 @@ namespace TailP
         }
 
         private int _lastPrintedLine = 0;
+
         private void PrintLogicalLines(LogicalLinesHistory logicalLines)
         {
             lock (_bl.PrintLock)
@@ -680,8 +696,8 @@ namespace TailP
 
                     if (!logicalLine.IsPrinted)
                     {
-                        if (Configuration.IsContextUsed &&
-                            Math.Abs(logicalLine.LineNumber - _lastPrintedLine) > 1)
+                        if (Configuration.IsContextUsed
+                            && Math.Abs(logicalLine.LineNumber - _lastPrintedLine) > 1)
                         {
                             _bl.PrintLogicalLine(TailPBL.GetContextDelimiter(), _fileIndex);
                         }
@@ -695,9 +711,9 @@ namespace TailP
 
         private void PrepareLogicalLineForPrinting(LogicalLine logicalLine, LogicalLinesHistory prepared)
         {
-            if (Configuration.IsContextBeforeUsed &&
-                _logicalLinesHistory.Any() &&
-                _logicalLine.IsVisible)
+            if (Configuration.IsContextBeforeUsed
+                && _logicalLinesHistory.Any()
+                && _logicalLine.IsVisible)
             {
                 prepared.Enqueue(_logicalLinesHistory);
                 _logicalLinesHistory.Clear();
@@ -746,7 +762,7 @@ namespace TailP
 
         public override int GetHashCode() => _file.GetHashCode();
 
-        public override string ToString() => FileName.ToString();
+        public override string ToString() => FileName;
 
         public void Dispose() => DisposeNoProcessTimer();
     }

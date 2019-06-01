@@ -7,13 +7,13 @@ namespace TailP
 {
     public class LogicalLinesHistory : Queue<LogicalLine>
     {
-        public int Limit { get; private set; }
+        public int Limit { get; }
 
         public LogicalLinesHistory(int limit) : base()
         {
             if (limit < 1)
             {
-                throw new ArgumentException("must be >= 1", "limit");
+                throw new ArgumentException("must be >= 1", nameof(limit));
             }
 
             Limit = limit;
@@ -35,7 +35,7 @@ namespace TailP
 
         public void Enqueue(LogicalLinesHistory history)
         {
-            foreach(var line in history)
+            foreach (var line in history)
             {
                 Enqueue(line);
             }

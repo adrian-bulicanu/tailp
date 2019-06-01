@@ -9,6 +9,7 @@ namespace TailP
         public static readonly string CONSOLE_FILENAME = @"CON";
 
         private static int _maxWidth = 0;
+
         public static int MAX_WIDTH
         {
             get
@@ -48,6 +49,7 @@ namespace TailP
 
         // NOTE: unit tests to be edited if markers length is changed!
         public static readonly string TRUNCATED_MARKER_END = ">";
+
         public static readonly string TRUNCATED_MARKER_MIDDLE = "<...>";
     }
 }

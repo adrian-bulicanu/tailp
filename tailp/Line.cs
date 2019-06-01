@@ -10,9 +10,9 @@ namespace TailP
 {
     public class Line : List<Token>
     {
-        public HashSet<int> FoundShowFilters { get; private set; } = new HashSet<int>();
-        public HashSet<int> FoundHideFilters { get; private set; } = new HashSet<int>();
-        public int LineNumber { get; private set; } = 0;
+        public HashSet<int> FoundShowFilters { get; } = new HashSet<int>();
+        public HashSet<int> FoundHideFilters { get; } = new HashSet<int>();
+        public int LineNumber { get; } = 0;
 
         private readonly StringComparison _comparison = Configuration.ComparisonOptions;
         private readonly bool _useRegex = Configuration.Regex;
@@ -49,8 +49,10 @@ namespace TailP
         /// </summary>
         public int Length => this.Sum(x => x.Text.Length);
 
+#pragma warning disable RCS1080 // Use 'Count/Length' property instead of 'Any' method.
         public bool IsShowed => FoundShowFilters.Any();
         public bool IsHided => FoundHideFilters.Any();
+#pragma warning restore RCS1080 // Use 'Count/Length' property instead of 'Any' method.
 
         /// <summary>
         /// Analog to string.Substring
@@ -118,6 +120,7 @@ namespace TailP
                     filterText.Length);
             }
         }
+
         /// <summary>
         /// Check filters in Types.None items and modify list if filtered item found
         /// </summary>
@@ -150,10 +153,7 @@ namespace TailP
                     // change Type for found token
                     var h = s.Substring(match.Item1, match.Item2);
                     Add(new Token(type, h, colorIndex));
-                    if (foundFilters != null)
-                    {
-                        foundFilters.Add(filterIndex);
-                    }
+                    foundFilters?.Add(filterIndex);
 
                     // keep searching in remained text
                     s = s.Substring(match.Item1 + match.Item2,
@@ -223,16 +223,16 @@ namespace TailP
                 int longestLength = -1;
                 for (int i = 0; i != Count; ++i)
                 {
-                    if (this[i].Type == Types.None &&
-                        this[i].Text.Length > longestLength)
+                    if (this[i].Type == Types.None
+                        && this[i].Text.Length > longestLength)
                     {
                         longestIndex = i;
                         longestLength = this[i].Text.Length;
                     }
                 }
 
-                if (longestIndex < 0 ||
-                    longestLength < Constants.TRUNCATED_MARKER_MIDDLE.Length + 1)
+                if (longestIndex < 0
+                    || longestLength < Constants.TRUNCATED_MARKER_MIDDLE.Length + 1)
                 {
                     return;
                 }
@@ -249,8 +249,8 @@ namespace TailP
                 item.Text.Length - toBeTruncated, Constants.TRUNCATED_MARKER_MIDDLE.Length);
             var firstItemLength = Math.Max(
                 (finalLength - Constants.TRUNCATED_MARKER_MIDDLE.Length) / 2, 0);
-            var secondItemLength = finalLength - firstItemLength -
-                                   Constants.TRUNCATED_MARKER_MIDDLE.Length;
+            var secondItemLength = finalLength - firstItemLength
+                                   - Constants.TRUNCATED_MARKER_MIDDLE.Length;
 
             RemoveAt(index);
 
@@ -304,10 +304,7 @@ namespace TailP
         {
             var sb = new StringBuilder();
 
-            ForEach(x =>
-            {
-                sb.Append(x);
-            });
+            ForEach(x => sb.Append(x));
 
             return sb.ToString();
         }

@@ -5,18 +5,21 @@ using System.Linq;
 
 namespace TailP
 {
-    /// <summary>
-    /// </summary>
     public static class FilesMonitor
     {
-        private static object _monitorEntriesLock = new object();
-        private static HashSet<FilesMonitorEntry> _monitorEntries =
+        private static readonly object _monitorEntriesLock = new object();
+
+        private static readonly HashSet<FilesMonitorEntry> _monitorEntries =
             new HashSet<FilesMonitorEntry>();
 
 #pragma warning disable S3264 // Events should be invoked
-        public static event FilesMonitorEntryHandler Created;
-        public static event FilesMonitorEntryHandler Deleted;
-        public static event FilesMonitorEntryHandler Changed;
+
+        public static event System.EventHandler<FilesMonitorEventArgs> Created;
+
+        public static event System.EventHandler<FilesMonitorEventArgs> Deleted;
+
+        public static event System.EventHandler<FilesMonitorEventArgs> Changed;
+
 #pragma warning restore S3264 // Events should be invoked
 
         /// <summary>

@@ -28,12 +28,16 @@ namespace TailP
             // ITaskbarList
             [PreserveSig]
             void HrInit();
+
             [PreserveSig]
             void AddTab(IntPtr hwnd);
+
             [PreserveSig]
             void DeleteTab(IntPtr hwnd);
+
             [PreserveSig]
             void ActivateTab(IntPtr hwnd);
+
             [PreserveSig]
             void SetActiveAlt(IntPtr hwnd);
 
@@ -44,6 +48,7 @@ namespace TailP
             // ITaskbarList3
             [PreserveSig]
             void SetProgressValue(IntPtr hwnd, UInt64 ullCompleted, UInt64 ullTotal);
+
             [PreserveSig]
             void SetProgressState(IntPtr hwnd, TaskbarStates state);
         }
@@ -61,9 +66,10 @@ namespace TailP
 
     public static class TaskbarProgress
     {
-        private static NativeMethods.ITaskbarList3 taskbarInstance =
+        private static readonly NativeMethods.ITaskbarList3 taskbarInstance =
             (NativeMethods.ITaskbarList3)new NativeMethods.TaskbarInstance();
-        private static bool taskbarSupported = Environment.OSVersion.Version >= new Version(6, 1);
+
+        private static readonly bool taskbarSupported = Environment.OSVersion.Version >= new Version(6, 1);
         private static IntPtr consoleHandle = IntPtr.Zero;
 
         private static IntPtr GetConsoleHandle()
@@ -75,6 +81,7 @@ namespace TailP
 
             return consoleHandle;
         }
+
         public static void SetState(IntPtr windowHandle, TaskbarStates taskbarState)
         {
             if (taskbarSupported) taskbarInstance.SetProgressState(windowHandle, taskbarState);

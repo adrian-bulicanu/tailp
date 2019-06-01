@@ -10,23 +10,23 @@ namespace TailP
 {
     public sealed class ArchiveSupport
     {
-        private static HashSet<string> SupportedExtensions = new HashSet<string>()
+        private static readonly HashSet<string> SupportedExtensions = new HashSet<string>()
         {
             ".zip", ".rar", ".7z"
         };
 
-        private static object _lock = new object();
+        private static readonly object _lock = new object();
 
         public static bool TryGetArchivePath(string path, out string archive, out string file)
         {
-            foreach(var extension in SupportedExtensions)
+            foreach (var extension in SupportedExtensions)
             {
                 var split = path.Split(new string[] { extension }, 2, StringSplitOptions.None);
                 if (split.Length == 2)
                 {
                     archive = split[0] + extension;
                     file = split[1];
-                    while(Path.IsPathRooted(file))
+                    while (Path.IsPathRooted(file))
                     {
                         file = file.Substring(1);
                     }
@@ -65,9 +65,9 @@ namespace TailP
 
         public class EntryInfo
         {
-            public string Path { get; private set; }
-            public long Size { get; private set; }
-            public DateTime CreatedTime { get; private set; }
+            public string Path { get; }
+            public long Size { get; }
+            public DateTime CreatedTime { get; }
 
             public EntryInfo(IArchiveEntry entry)
             {
@@ -138,19 +138,20 @@ namespace TailP
             }
         }
 
-        
 #pragma warning disable S1135 // Track uses of "TODO" tags
-// TODO: to dispose after inactivity timeout
-        private static Dictionary<string, IArchive> _archives =
+
+        // TODO: to dispose after inactivity timeout
+        private static readonly Dictionary<string, IArchive> _archives =
 #pragma warning restore S1135 // Track uses of "TODO" tags
             new Dictionary<string, IArchive>(StringComparer.CurrentCultureIgnoreCase);
+
         // archive path / file path inside archive / entry
-        private static Dictionary<string, Dictionary<string, IArchiveEntry>> _archivesEntries = 
+        private static readonly Dictionary<string, Dictionary<string, IArchiveEntry>> _archivesEntries =
             new Dictionary<string, Dictionary<string, IArchiveEntry>>(StringComparer.CurrentCultureIgnoreCase);
 
         private static IArchive GetArchive(string archive)
         {
-            lock(_lock)
+            lock (_lock)
             {
                 if (!_archives.TryGetValue(archive, out IArchive arch))
                 {
