@@ -1,5 +1,4 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/y1m45wj4wgjaa6wn?svg=true)](https://ci.appveyor.com/project/adrian-bulicanu/tailp)
-[![Quality Gate](https://sonarcloud.io/api/badges/gate?key=tailp)](https://sonarcloud.io/dashboard/index/tailp)
 
 # tailp
 
