@@ -140,11 +140,12 @@ namespace tailpTests
         }
 
         [TestMethod]
+        [ExpectedException(typeof(TailPArchiveException))]
         public void ArchiveSupportTest08EnumerateFiles()
         {
             string path = @"..\..\TestFiles\dummytext.txt";
 
-            Assert.ThrowsException<TailPArchiveException>(() => ArchiveSupport.EnumerateFiles(path));
+            ArchiveSupport.EnumerateFiles(path);
         }
 
         [TestMethod]

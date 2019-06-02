@@ -22,12 +22,17 @@ namespace tailpTests
         }
 
         [TestMethod]
-        public void LineTest00Substring()
+        [ExpectedException(typeof(ArgumentOutOfRangeException))]
+        public void LineTest00SubstringMin()
         {
-            Assert.ThrowsException<ArgumentOutOfRangeException>(
-                () => _fixture.Substring(int.MinValue));
-            Assert.ThrowsException<ArgumentOutOfRangeException>(
-                () => _fixture.Substring(int.MaxValue));
+            _fixture.Substring(int.MinValue);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentOutOfRangeException))]
+        public void LineTest00SubstringMax()
+        {
+            _fixture.Substring(int.MaxValue);
         }
 
         [TestMethod]
