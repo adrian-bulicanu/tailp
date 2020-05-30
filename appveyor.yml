@@ -19,9 +19,11 @@ dotnet_csproj:
   assembly_version: '{version}'
   file_version: '{version}'
 
+after_build:
+    7z a tailp.zip %APPVEYOR_BUILD_FOLDER%\tailp\bin\$(configuration)\tailp.exe
+
 artifacts:
-  path: tailp\bin\$(configuration)\tailp.exe
-  name: tailp
+  path: tailp.zip
 
 cache:
   - '%LocalAppData%\NuGet\v3-cache' # NuGet v3
