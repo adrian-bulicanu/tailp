@@ -15,12 +15,13 @@ before_build:
 
 dotnet_csproj:
   patch: true
-  file: '**\*.csproj'
+  file: '**\tailp.csproj'
   assembly_version: '{version}'
   file_version: '{version}'
 
 artifacts:
-  - path: tailp\bin\$(configuration)\tailp.exe
+  path: tailp\bin\$(configuration)\tailp.exe
+  name: tailp
 
 cache:
   - '%LocalAppData%\NuGet\v3-cache' # NuGet v3
