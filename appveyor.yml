@@ -20,7 +20,7 @@ dotnet_csproj:
   file_version: '{version}'
 
 after_build:
-    7z a tailp.zip %APPVEYOR_BUILD_FOLDER%\tailp\bin\$(configuration)\tailp.exe
+    7z a tailp.zip %APPVEYOR_BUILD_FOLDER%\tailp\bin\Release\tailp.exe
 
 artifacts:
   path: tailp.zip
