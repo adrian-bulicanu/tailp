@@ -16,8 +16,12 @@ before_build:
 dotnet_csproj:
   patch: true
   file: '**\tailp.csproj'
+  version: '{version}'
+  version_prefix: '{version}'
+  package_version: '{version}'
   assembly_version: '{version}'
   file_version: '{version}'
+  informational_version: '{version}'
 
 after_build:
     7z a tailp.zip %APPVEYOR_BUILD_FOLDER%\tailp\bin\Release\tailp.exe
