@@ -6,7 +6,7 @@ branches:
 
 skip_tags: true
 
-image: .NET Core SDK 3.1.202
+image: Visual Studio 2019
 platform: Any CPU
 configuration: Release
 
