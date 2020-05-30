@@ -13,15 +13,11 @@ configuration: Release
 before_build:
   - nuget restore
 
-dotnet_csproj:
+assembly_info:
   patch: true
-  file: '**\tailp.csproj'
-  version: '{version}'
-  version_prefix: '{version}'
-  package_version: '{version}'
-  assembly_version: '{version}'
-  file_version: '{version}'
-  informational_version: '{version}'
+  file: AssemblyInfo.cs
+  assembly_version: $(appveyor_build_version)
+  assembly_file_version: $(appveyor_build_version)
 
 after_build:
     7z a tailp.zip %APPVEYOR_BUILD_FOLDER%\tailp\bin\Release\tailp.exe
