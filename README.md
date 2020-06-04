@@ -1,4 +1,4 @@
-[![Build status](https://ci.appveyor.com/api/projects/status/y1m45wj4wgjaa6wn?svg=true)](https://ci.appveyor.com/project/adrian-bulicanu/tailp)
+[![Build status](https://ci.appveyor.com/api/projects/status/tylwn35rrw2hln7j?svg=true)](https://ci.appveyor.com/project/adrian-bulicanu/tailp)
 
 # tailp
 
