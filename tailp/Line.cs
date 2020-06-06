@@ -12,17 +12,17 @@ namespace TailP
     {
         public HashSet<int> FoundShowFilters { get; } = new HashSet<int>();
         public HashSet<int> FoundHideFilters { get; } = new HashSet<int>();
-        public int LineNumber { get; } = 0;
+        public int LineNumber { get; }
 
         private readonly StringComparison _comparison = Configuration.ComparisonOptions;
         private readonly bool _useRegex = Configuration.Regex;
-        private readonly bool _isLogicalContinuation = false;
+        private readonly bool _isLogicalContinuation;
 
-        public Line() : base()
+        public Line()
         {
         }
 
-        public Line(Line other, bool copyTokens = true) : base()
+        private Line(Line other, bool copyTokens = true)
         {
             _comparison = other._comparison;
             _useRegex = other._useRegex;
@@ -47,7 +47,7 @@ namespace TailP
         /// <summary>
         /// Returns total length of text
         /// </summary>
-        public int Length => this.Sum(x => x.Text.Length);
+        private int Length => this.Sum(x => x.Text.Length);
 
 #pragma warning disable RCS1080 // Use 'Count/Length' property instead of 'Any' method.
         public bool IsShowed => FoundShowFilters.Any();
@@ -198,7 +198,7 @@ namespace TailP
             }
 
             var remainder = Substring(resultStringLength - Constants.TRUNCATED_MARKER_END.Length);
-            var canBeTruncated = !remainder.Any(x => x.Type != Types.None);
+            var canBeTruncated = remainder.All(x => x.Type == Types.None);
 
             if (force || canBeTruncated)
             {

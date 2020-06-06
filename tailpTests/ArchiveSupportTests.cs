@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TailP;
 using System.Collections.Generic;
+// ReSharper disable ConditionIsAlwaysTrueOrFalse
 
 namespace tailpTests
 {
@@ -71,9 +72,7 @@ namespace tailpTests
             string path = @"..\..\..\TestFiles\1.txt\1\3\Annotations.cs";
 
             var expResult = false;
-            string actArchive;
-            string actFile;
-            var actResult = ArchiveSupport.TryGetArchivePath(path, out actArchive, out actFile);
+            var actResult = ArchiveSupport.TryGetArchivePath(path, out _, out _);
 
             Assert.AreEqual(expResult, actResult);
         }

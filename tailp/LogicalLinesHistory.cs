@@ -7,19 +7,19 @@ namespace TailP
 {
     public class LogicalLinesHistory : Queue<LogicalLine>
     {
-        public int Limit { get; }
+        private int Limit { get; }
 
-        public LogicalLinesHistory(int limit) : base()
+        public LogicalLinesHistory(int limit)
         {
             if (limit < 1)
             {
-                throw new ArgumentException("must be >= 1", nameof(limit));
+                throw new ArgumentException(@"must be >= 1", nameof(limit));
             }
 
             Limit = limit;
         }
 
-        public LogicalLinesHistory() : base()
+        public LogicalLinesHistory()
         {
             Limit = int.MaxValue;
         }

@@ -27,9 +27,9 @@ namespace TailP
 
     public sealed class FilesMonitorEntry : IDisposable
     {
-        public string Folder { get; }
-        public string Mask { get; }
-        public FileTypes FileType { get; }
+        private string Folder { get; }
+        private string Mask { get; }
+        private FileTypes FileType { get; }
 
         private readonly object _filesLock = new object();
 
@@ -43,10 +43,10 @@ namespace TailP
         public event EventHandler<FilesMonitorEventArgs> Changed;
 
         private readonly object _watcherLock = new object();
-        private FileSystemWatcher _watcher = null;
-        private readonly TailPBL _bl;
+        private FileSystemWatcher _watcher;
+        private readonly TailPbl _bl;
 
-        public FilesMonitorEntry(string path, TailPBL bl)
+        public FilesMonitorEntry(string path, TailPbl bl)
         {
             if (path == Constants.CONSOLE_FILENAME)
             {
@@ -67,7 +67,7 @@ namespace TailP
                 FileType = IsWildcard ? FileTypes.Wildcard : FileTypes.Regular;
             }
 
-            if (string.IsNullOrEmpty(Folder.Trim()) && FileType != FileTypes.Console)
+            if ((Folder == null || string.IsNullOrEmpty(Folder.Trim())) && FileType != FileTypes.Console)
             {
                 Folder = ".";
             }
@@ -98,7 +98,7 @@ namespace TailP
             }
             if (isNewError)
             {
-                _bl.NewLineCallback(TailPBL.GetErrorLine(error), 0);
+                _bl.NewLineCallback(TailPbl.GetErrorLine(error), 0);
             }
         }
 
@@ -208,7 +208,7 @@ namespace TailP
             }
         }
 
-        private bool IsWildcard => Mask.IndexOfAny(new char[] { '?', '*' }) != -1;
+        private bool IsWildcard => Mask.IndexOfAny(new[] { '?', '*' }) != -1;
 
         private void InternalCreatedOrChanged(object sender, string file)
         {
@@ -217,7 +217,7 @@ namespace TailP
                 return;
             }
 
-            var added = false;
+            bool added;
             lock (_filesLock)
             {
                 added = _files.Add(file);
@@ -235,7 +235,7 @@ namespace TailP
 
         private void InternalRemoved(object sender, string file)
         {
-            var removed = false;
+            bool removed;
             lock (_filesLock)
             {
                 removed = _files.Remove(file);

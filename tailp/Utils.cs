@@ -23,7 +23,7 @@ namespace TailP
             var normalizedPath = path.Replace('\\', '/').ToUpper();
 
             // regex is slow, tries string comparison first
-            if (normalizedMask.IndexOfAny(new char[] { '*', '?' }) == -1)
+            if (normalizedMask.IndexOfAny(new[] { '*', '?' }) == -1)
             {
                 return normalizedPath.IndexOf(normalizedMask, StringComparison.CurrentCulture)
                     == normalizedPath.Length - normalizedMask.Length;

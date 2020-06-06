@@ -48,7 +48,7 @@ namespace TailP
         }
 
         public override int GetHashCode() =>
-            Type.GetHashCode() ^ Text.GetHashCode() ^ ColorIndex.GetHashCode();
+            Type.GetHashCode() ^ ColorIndex.GetHashCode();
 
         public override string ToString() => Text;
     }

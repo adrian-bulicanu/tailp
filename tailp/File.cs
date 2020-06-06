@@ -41,18 +41,18 @@ namespace TailP
 
         private LogicalLine _logicalLine = new LogicalLine();
         private readonly LogicalLinesHistory _logicalLinesHistory;
-        private int _lineNumber = 0;
+        private int _lineNumber;
         private bool _isFilenameNeeded = true;
-        private readonly string _file = string.Empty;
+        private readonly string _file;
         private readonly object _minorLock = new object();
-        private long _lastPos = 0;
+        private long _lastPos;
         private DateTime _lastCreationTime = DateTime.MinValue;
-        private readonly TailPBL _bl;
+        private readonly TailPbl _bl;
         private readonly int _fileIndex;
-        private FileInfoCache _fileInfo = null;
-        private bool _errorShown = false;
+        private FileInfoCache _fileInfo;
+        private bool _errorShown;
         private readonly FileTypes _fileType = FileTypes.Regular;
-        private int _startFromNum = 0;
+        private int _startFromNum;
         private int _afterCounter = -1;
 
         public FileTypes FileType
@@ -95,7 +95,7 @@ namespace TailP
                 }
             }
 
-            set
+            private set
             {
                 lock (_minorLock)
                 {
@@ -111,7 +111,7 @@ namespace TailP
             }
         }
 
-        public DateTime FileCreationTime
+        private DateTime FileCreationTime
         {
             get
             {
@@ -144,7 +144,7 @@ namespace TailP
             }
         }
 
-        public File(string file, TailPBL bl, int fileIndex)
+        public File(string file, TailPbl bl, int fileIndex)
         {
             if (string.IsNullOrEmpty(file)) throw new ArgumentException(nameof(file));
             _bl = bl ?? throw new ArgumentNullException(nameof(bl));
@@ -255,12 +255,12 @@ namespace TailP
             }
         }
 
-        private bool _lastLinesProcessed = false;
+        private bool _lastLinesProcessed;
 
         private void FindLastLinesInStream(Stream stream)
         {
             if (_lastLinesProcessed
-                || Configuration.LinesStartFrom != NumLinesStart.end)
+                || Configuration.LinesStartFrom != NumLinesStart.End)
             {
                 return;
             }
@@ -390,7 +390,7 @@ namespace TailP
                         if (from != 0)
                         {
                             var nul = sr.ReadLine(); // ignore first line, may be incomplete
-                            var szBytes = encoding.GetByteCount(nul);
+                            var szBytes = encoding.GetByteCount(nul ?? string.Empty);
                             if (szBytes >= Constants.REVERS_SEARCH_PAGE_SIZE) // extra long line
                             {
                                 return false;
@@ -429,7 +429,7 @@ namespace TailP
             return true;
         }
 
-        private Timer _noProcessTimer = null;
+        private Timer _noProcessTimer;
 
         private void CreateNoProcessTimer()
         {
@@ -557,7 +557,7 @@ namespace TailP
             if (showError)
             {
                 error += string.Format(". [{0}]", FileName);
-                _bl.NewLineCallback(TailPBL.GetErrorLine(error), 0);
+                _bl.NewLineCallback(TailPbl.GetErrorLine(error), 0);
             }
         }
 
@@ -586,10 +586,10 @@ namespace TailP
         {
             switch (Configuration.StartLocationType)
             {
-                case StartLocationTypes.b:
+                case StartLocationTypes.B:
                     return Configuration.StartLocation;
 
-                case StartLocationTypes.p:
+                case StartLocationTypes.P:
                     return Configuration.StartLocation * FileSize / 100;
 
                 default:
@@ -629,7 +629,7 @@ namespace TailP
         private bool SkipFromNumLines()
         {
             var mustSkip =
-                Configuration.LinesStartFrom == NumLinesStart.begin
+                Configuration.LinesStartFrom == NumLinesStart.Begin
                 && _startFromNum > 0
                 && _logicalLine.IsVisible;
 
@@ -682,7 +682,7 @@ namespace TailP
             _isFilenameNeeded = false;
         }
 
-        private int _lastPrintedLine = 0;
+        private int _lastPrintedLine;
 
         private void PrintLogicalLines(LogicalLinesHistory logicalLines)
         {
@@ -699,7 +699,7 @@ namespace TailP
                         if (Configuration.IsContextUsed
                             && Math.Abs(logicalLine.LineNumber - _lastPrintedLine) > 1)
                         {
-                            _bl.PrintLogicalLine(TailPBL.GetContextDelimiter(), _fileIndex);
+                            _bl.PrintLogicalLine(TailPbl.GetContextDelimiter(), _fileIndex);
                         }
 
                         _bl.PrintLogicalLine(logicalLine, _fileIndex);

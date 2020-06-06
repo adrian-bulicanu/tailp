@@ -10,7 +10,7 @@ namespace TailP
 {
     public sealed class ArchiveSupport
     {
-        private static readonly HashSet<string> SupportedExtensions = new HashSet<string>()
+        private static readonly HashSet<string> _supportedExtensions = new HashSet<string>()
         {
             ".zip", ".rar", ".7z"
         };
@@ -19,9 +19,9 @@ namespace TailP
 
         public static bool TryGetArchivePath(string path, out string archive, out string file)
         {
-            foreach (var extension in SupportedExtensions)
+            foreach (var extension in _supportedExtensions)
             {
-                var split = path.Split(new string[] { extension }, 2, StringSplitOptions.None);
+                var split = path.Split(new[] { extension }, 2, StringSplitOptions.None);
                 if (split.Length == 2)
                 {
                     archive = split[0] + extension;
@@ -65,7 +65,7 @@ namespace TailP
 
         public class EntryInfo
         {
-            public string Path { get; }
+            private string Path { get; }
             public long Size { get; }
             public DateTime CreatedTime { get; }
 

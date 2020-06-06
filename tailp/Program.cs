@@ -11,18 +11,18 @@ namespace TailP
     internal static class Program
     {
         // used hardcoded colors instead of default, because on Ctrl-C color changes to last used
-        private const ConsoleColor DEFAULT_BACKGROUND = ConsoleColor.Black;
+        private const ConsoleColor DefaultBackground = ConsoleColor.Black;
 
-        private const ConsoleColor DEFAULT_FOREGROUND = ConsoleColor.Gray;
+        private const ConsoleColor DefaultForeground = ConsoleColor.Gray;
 
-        private const int STATUS_TIMER_PERIOD_MS = 1000;
+        private const int StatusTimerPeriodMs = 1000;
 
-        static private Timer _statusTimer;
-        static private long _lastPos = 0;
-        static private string _lastFileName;
-        static private DateTime _lastChanged = DateTime.Now;
+        private static Timer _statusTimer;
+        private static long _lastPos;
+        private static string _lastFileName;
+        private static DateTime _lastChanged = DateTime.Now;
 
-        static private string ProcessedBytesToString(long processed, long total)
+        private static string ProcessedBytesToString(long processed, long total)
         {
             if (total < 1024)
             {
@@ -46,13 +46,13 @@ namespace TailP
                 Math.Round(100.0 * total / 1024 / 1024 / 1024 / 100, 2));
         }
 
-        static private void StartUpdatingStatus()
+        private static void StartUpdatingStatus()
         {
             _statusTimer = new Timer(
-                (_) => UpdateStatus(), null, 0, STATUS_TIMER_PERIOD_MS);
+                (_) => UpdateStatus(), null, 0, StatusTimerPeriodMs);
         }
 
-        static private void UpdateProgressBar(byte percents)
+        private static void UpdateProgressBar(byte percents)
         {
             if (percents < 100)
             {
@@ -65,7 +65,7 @@ namespace TailP
             }
         }
 
-        static private void UpdateStatus()
+        private static void UpdateStatus()
         {
             var lastPos = _bl.TotalProcessed;
             var totalSize = _bl.TotalFilesSize;
@@ -91,24 +91,24 @@ namespace TailP
                 var title = string.Format(
                     "{0} | {1} last processed: {2} {3} ago ({4}) | ",
                     ProcessedBytesToString(lastPos, totalSize),
-                    GetETAText(percents),
+                    GetEtaText(percents),
                     Path.GetFileName(_bl.LastFileName),
                     DateTime.Now.Subtract(_lastChanged).ToHumanReadableString(),
                     files);
 
                 Console.Title = title.AppendFromRight(
-                    Path.GetFullPath(_bl.LastFileName), Console.WindowWidth);
+                    Path.GetFullPath(_bl.LastFileName!), Console.WindowWidth);
 
                 UpdateProgressBar(percents);
             }
         }
 
-        static private DateTime _lastCalculate = DateTime.UtcNow;
-        static private byte _lastPercents = 100;
-        static private readonly Queue<double> _secondsPerPercent = new Queue<double>();
-        private const int SAMPLES_COUNT = 5;
+        private static DateTime _lastCalculate = DateTime.UtcNow;
+        private static byte _lastPercents = 100;
+        private static readonly Queue<double> _secondsPerPercent = new Queue<double>();
+        private const int SamplesCount = 5;
 
-        private static string GetETAText(byte percents)
+        private static string GetEtaText(byte percents)
         {
             if (_lastPercents != percents)
             {
@@ -125,12 +125,12 @@ namespace TailP
                 _lastCalculate = DateTime.UtcNow;
             }
 
-            while (_secondsPerPercent.Count > SAMPLES_COUNT)
+            while (_secondsPerPercent.Count > SamplesCount)
             {
                 _secondsPerPercent.Dequeue();
             }
 
-            var estimated = _secondsPerPercent.Count == SAMPLES_COUNT
+            var estimated = _secondsPerPercent.Count == SamplesCount
                 ? TimeSpan.FromSeconds(
                     Math.Round(_secondsPerPercent.Average() * (100 - percents))
                     )
@@ -149,13 +149,13 @@ namespace TailP
             return string.Empty;
         }
 
-        static private void ResetConsoleColors()
+        private static void ResetConsoleColors()
         {
-            Console.BackgroundColor = DEFAULT_BACKGROUND;
-            Console.ForegroundColor = DEFAULT_FOREGROUND;
+            Console.BackgroundColor = DefaultBackground;
+            Console.ForegroundColor = DefaultForeground;
         }
 
-        static private TailPBL _bl;
+        private static TailPbl _bl;
 
         private static void Main(string[] args)
         {
@@ -164,7 +164,7 @@ namespace TailP
 
             NewLine();
 
-            _bl = new TailPBL((l, i) => WriteLine(l, i));
+            _bl = new TailPbl((l, i) => WriteLine(l, i));
             try
             {
                 _bl.ParseArgs(args);
@@ -200,7 +200,7 @@ namespace TailP
             }
         }
 
-        static private readonly ConsoleColor[] _availableFilterColors = new ConsoleColor[]
+        private static readonly ConsoleColor[] _availableFilterColors = new[]
         {
             ConsoleColor.Yellow,
             ConsoleColor.Green,
@@ -212,10 +212,10 @@ namespace TailP
             ConsoleColor.DarkMagenta
         };
 
-        static private readonly Dictionary<int, ConsoleColor> _filterColors = new Dictionary<int, ConsoleColor>();
-        static private int _lastFilterColor = _availableFilterColors.Length;
+        private static readonly Dictionary<int, ConsoleColor> _filterColors = new Dictionary<int, ConsoleColor>();
+        private static int _lastFilterColor = _availableFilterColors.Length;
 
-        static private ConsoleColor GetFilterBackgroundColor(int colorIndex)
+        private static ConsoleColor GetFilterBackgroundColor(int colorIndex)
         {
             if (!_filterColors.TryGetValue(colorIndex, out ConsoleColor color))
             {
@@ -230,7 +230,7 @@ namespace TailP
             return color;
         }
 
-        static private readonly ConsoleColor[] _availableFilesColors = new ConsoleColor[]
+        private static readonly ConsoleColor[] _availableFilesColors = new[]
         {
             ConsoleColor.Gray,
             ConsoleColor.Yellow,
@@ -239,10 +239,10 @@ namespace TailP
             ConsoleColor.Magenta,
         };
 
-        static private readonly Dictionary<int, ConsoleColor> _fileColors = new Dictionary<int, ConsoleColor>();
-        static private int _lastFileColor = _availableFilesColors.Length;
+        private static readonly Dictionary<int, ConsoleColor> _fileColors = new Dictionary<int, ConsoleColor>();
+        private static int _lastFileColor = _availableFilesColors.Length;
 
-        static private ConsoleColor GetFileForegroundColor(int fileIndex)
+        private static ConsoleColor GetFileForegroundColor(int fileIndex)
         {
             if (!_fileColors.TryGetValue(fileIndex, out ConsoleColor color))
             {
@@ -279,7 +279,7 @@ namespace TailP
                 default:
                     return Configuration.Follow
                                 ? GetFileForegroundColor(fileIndex)
-                                : DEFAULT_FOREGROUND;
+                                : DefaultForeground;
             }
         }
 
@@ -295,7 +295,7 @@ namespace TailP
                     return ConsoleColor.DarkRed;
 
                 default:
-                    return DEFAULT_BACKGROUND;
+                    return DefaultBackground;
             }
         }
 

@@ -11,12 +11,12 @@ namespace TailP
         public static bool ShowLineNumber { get; set; } = false;
         public static string LogicalLineMarker { get; set; } = string.Empty;
         public static long StartLocation { get; set; } = 0;
-        public static StartLocationTypes StartLocationType { get; set; } = StartLocationTypes.b;
+        public static StartLocationTypes StartLocationType { get; set; } = StartLocationTypes.B;
         public static StringComparison ComparisonOptions { get; set; } = StringComparison.InvariantCultureIgnoreCase;
         public static bool AllFilters { get; set; } = false;
         public static bool Regex { get; set; } = false;
         public static bool Follow { get; set; } = false;
-        public static NumLinesStart LinesStartFrom { get; set; } = NumLinesStart.begin;
+        public static NumLinesStart LinesStartFrom { get; set; } = NumLinesStart.Begin;
         public static int LinesStartNumber { get; set; } = 0;
         public static bool Recursive { get; set; } = true;
 
@@ -24,7 +24,7 @@ namespace TailP
         public static int ContextBefore { get; set; } = -1;
         public static int ContextLines => Math.Max(0, ContextBefore) + Math.Max(0, ContextAfter);
         public static bool IsContextBeforeUsed => ContextBefore > 0;
-        public static bool IsContextAfterUsed => ContextAfter > 0;
+        private static bool IsContextAfterUsed => ContextAfter > 0;
         public static bool IsContextUsed => IsContextBeforeUsed || IsContextAfterUsed;
 
         public static List<string> FiltersShow { get; } = new List<string>();
@@ -61,11 +61,6 @@ namespace TailP
                     return _showFile.HasValue;
                 }
             }
-        }
-
-        static Configuration()
-        {
-            Recursive = true;
         }
     }
 }

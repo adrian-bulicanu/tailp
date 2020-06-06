@@ -12,12 +12,12 @@ namespace TailP
 {
 #pragma warning disable S101 // Types should be named in camel case
 
-    public sealed class TailPBL : IDisposable
+    public sealed class TailPbl : IDisposable
 #pragma warning restore S101 // Types should be named in camel case
     {
         public delegate void NewLineFunc(Line line, int fileIndex);
 
-        public TailPBL(NewLineFunc function)
+        public TailPbl(NewLineFunc function)
         {
             NewLineCallback = function ?? throw new ArgumentNullException(nameof(function));
 
@@ -36,7 +36,7 @@ namespace TailP
         private readonly ConcurrentDictionary<string, File> _files =
             new ConcurrentDictionary<string, File>(StringComparer.CurrentCultureIgnoreCase);
 
-        private int _lastFileIndex = 0;
+        private int _lastFileIndex;
         public object PrintLock { get; }
         public NewLineFunc NewLineCallback { get; }
 
@@ -89,6 +89,7 @@ namespace TailP
                 .Distinct()
                 .Count();
 
+        // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
         private void AdjustAndCheckIndex(ref int index, int lastIndex, string arg)
         {
             if (index == lastIndex)
@@ -288,6 +289,7 @@ namespace TailP
                         _processEvent.WaitOne(Constants.FORCE_DETECT_PERIOD);
                         Tick();
                     }
+                    // ReSharper disable once FunctionNeverReturns
                 }).Start();
             }
             else
@@ -428,8 +430,8 @@ namespace TailP
 
             Configuration.LinesStartFrom =
                 num[0] == '+' ?
-                    NumLinesStart.begin :
-                    NumLinesStart.end;
+                    NumLinesStart.Begin :
+                    NumLinesStart.End;
 
             if (int.TryParse(num, out int number))
             {

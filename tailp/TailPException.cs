@@ -8,15 +8,15 @@ namespace TailP
     [Serializable]
     public class TailPException : Exception
     {
-        public TailPException()
+        protected TailPException()
         {
         }
 
-        public TailPException(string message) : base(message)
+        protected TailPException(string message) : base(message)
         {
         }
 
-        public TailPException(string message, Exception innerException) : base(message, innerException)
+        protected TailPException(string message, Exception innerException) : base(message, innerException)
         {
         }
 

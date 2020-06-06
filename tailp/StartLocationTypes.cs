@@ -4,7 +4,7 @@ namespace TailP
 {
     public enum StartLocationTypes
     {
-        p, // percent
-        b // bytes
+        P, // percent
+        B // bytes
     };
 }

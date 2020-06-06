@@ -2,6 +2,7 @@
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 using System;
 using System.Runtime.InteropServices;
+// ReSharper disable SuspiciousTypeConversion.Global
 
 namespace TailP
 {
@@ -66,40 +67,40 @@ namespace TailP
 
     public static class TaskbarProgress
     {
-        private static readonly NativeMethods.ITaskbarList3 taskbarInstance =
+        private static readonly NativeMethods.ITaskbarList3 _taskbarInstance =
             (NativeMethods.ITaskbarList3)new NativeMethods.TaskbarInstance();
 
-        private static readonly bool taskbarSupported = Environment.OSVersion.Version >= new Version(6, 1);
-        private static IntPtr consoleHandle = IntPtr.Zero;
+        private static readonly bool _taskbarSupported = Environment.OSVersion.Version >= new Version(6, 1);
+        private static IntPtr _consoleHandle = IntPtr.Zero;
 
         private static IntPtr GetConsoleHandle()
         {
-            if (consoleHandle == IntPtr.Zero)
+            if (_consoleHandle == IntPtr.Zero)
             {
-                consoleHandle = NativeMethods.GetConsoleWindow();
+                _consoleHandle = NativeMethods.GetConsoleWindow();
             }
 
-            return consoleHandle;
+            return _consoleHandle;
         }
 
         public static void SetState(IntPtr windowHandle, TaskbarStates taskbarState)
         {
-            if (taskbarSupported) taskbarInstance.SetProgressState(windowHandle, taskbarState);
+            if (_taskbarSupported) _taskbarInstance.SetProgressState(windowHandle, taskbarState);
         }
 
         public static void SetValue(IntPtr windowHandle, double progressValue, double progressMax)
         {
-            if (taskbarSupported) taskbarInstance.SetProgressValue(windowHandle, (ulong)progressValue, (ulong)progressMax);
+            if (_taskbarSupported) _taskbarInstance.SetProgressValue(windowHandle, (ulong)progressValue, (ulong)progressMax);
         }
 
         public static void SetState(TaskbarStates taskbarState)
         {
-            if (taskbarSupported) taskbarInstance.SetProgressState(GetConsoleHandle(), taskbarState);
+            if (_taskbarSupported) _taskbarInstance.SetProgressState(GetConsoleHandle(), taskbarState);
         }
 
         public static void SetValue(double progressValue, double progressMax)
         {
-            if (taskbarSupported) taskbarInstance.SetProgressValue(GetConsoleHandle(), (ulong)progressValue, (ulong)progressMax);
+            if (_taskbarSupported) _taskbarInstance.SetProgressValue(GetConsoleHandle(), (ulong)progressValue, (ulong)progressMax);
         }
     }
 }

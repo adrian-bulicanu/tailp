@@ -8,9 +8,11 @@ namespace TailP
     {
         public static readonly string CONSOLE_FILENAME = @"CON";
 
-        private static int _maxWidth = 0;
+        private static int _maxWidth;
 
+        // ReSharper disable InconsistentNaming
         public static int MAX_WIDTH
+            // ReSharper restore InconsistentNaming
         {
             get
             {

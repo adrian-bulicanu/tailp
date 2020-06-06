@@ -36,11 +36,11 @@ namespace TailP
             entries.ForEach(x => x.ForceProcess());
         }
 
-        public static void Add(string path, bool follow, TailPBL bl)
+        public static void Add(string path, bool follow, TailPbl bl)
         {
             var entry = new FilesMonitorEntry(path, bl);
 
-            var added = false;
+            bool added;
             lock (_monitorEntriesLock)
             {
                 added = _monitorEntries.Add(entry);
