@@ -23,8 +23,6 @@ namespace TailP
             $"file: {File}, sender: {Sender}";
     }
 
-    public delegate void FilesMonitorEntryHandler(object sender, FilesMonitorEventArgs e);
-
     public sealed class FilesMonitorEntry : IDisposable
     {
         private string Folder { get; }

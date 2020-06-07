@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TailP;
 // ReSharper disable ConditionIsAlwaysTrueOrFalse
+// ReSharper disable ConvertToConstant.Local
 
 namespace tailpTests
 {

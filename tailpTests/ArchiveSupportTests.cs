@@ -2,6 +2,7 @@
 using TailP;
 using System.Collections.Generic;
 // ReSharper disable ConditionIsAlwaysTrueOrFalse
+// ReSharper disable ConvertToConstant.Local
 
 namespace tailpTests
 {

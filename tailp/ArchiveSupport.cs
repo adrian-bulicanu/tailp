@@ -138,11 +138,8 @@ namespace TailP
             }
         }
 
-#pragma warning disable S1135 // Track uses of "TODO" tags
-
         // TODO: to dispose after inactivity timeout
         private static readonly Dictionary<string, IArchive> Archives =
-#pragma warning restore S1135 // Track uses of "TODO" tags
             new Dictionary<string, IArchive>(StringComparer.CurrentCultureIgnoreCase);
 
         // archive path / file path inside archive / entry

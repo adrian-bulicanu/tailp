@@ -367,11 +367,11 @@ namespace TailP
                 {
                     ms = new MemoryStream(buf, 0, sz);
                     using var sr = new StreamReader(ms, encoding,
-                        @from == 0 // ignore BOM only at file beginning
+                        from == 0 // ignore BOM only at file beginning
                     );
                     ms = null; // prevent disposing several times
 
-                    if (@from != 0)
+                    if (from != 0)
                     {
                         var nul = sr.ReadLine(); // ignore first line, may be incomplete
                         var szBytes = encoding.GetByteCount(nul ?? string.Empty);
@@ -379,7 +379,7 @@ namespace TailP
                         {
                             return false;
                         }
-                        @from += szBytes;
+                        from += szBytes;
                     }
 
                     var s = sr.ReadLine();
