@@ -91,7 +91,7 @@ namespace TailP
             {
                 lock (_minorLock)
                 {
-                    return _fileInfo == null ? 0 : _fileInfo.Length;
+                    return _fileInfo?.Length ?? 0;
                 }
             }
 
@@ -117,7 +117,7 @@ namespace TailP
             {
                 lock (_minorLock)
                 {
-                    return _fileInfo == null ? DateTime.MinValue : _fileInfo.CreationTime;
+                    return _fileInfo?.CreationTime ?? DateTime.MinValue;
                 }
             }
         }
@@ -129,17 +129,6 @@ namespace TailP
                 lock (_minorLock)
                 {
                     return _file;
-                }
-            }
-        }
-
-        public int FileIndex
-        {
-            get
-            {
-                lock (_minorLock)
-                {
-                    return _fileIndex;
                 }
             }
         }
@@ -157,7 +146,7 @@ namespace TailP
             {
                 _fileType = FileTypes.Console;
             }
-            else if (ArchiveSupport.TryGetArchivePath(file, out string archive, out string finalFile)
+            else if (ArchiveSupport.TryGetArchivePath(file, out var archive, out var finalFile)
                 && ArchiveSupport.IsValidArchive(archive))
             {
                 _fileType = string.IsNullOrWhiteSpace(finalFile)
@@ -194,7 +183,7 @@ namespace TailP
 
                         default:
                             throw new InvalidOperationException(
-                                string.Format("Unknown FileType {0}", _fileType));
+                                $"Unknown FileType {_fileType}");
                     }
                 }
                 catch
@@ -311,34 +300,30 @@ namespace TailP
                 encoding = Console.InputEncoding;
             }
 
-            using (var sr = new StreamReader(stream, encoding, true))
+            using var sr = new StreamReader(stream, encoding, true);
+            SeekToLastPos(sr);
+            var s = ReadLine(sr);
+            while (s != null)
             {
-                SeekToLastPos(sr);
-                var s = ReadLine(sr);
-                while (s != null)
-                {
-                    ProcessReadLine(s, logicalLines);
-                    s = ReadLine(sr);
-                }
+                ProcessReadLine(s, logicalLines);
+                s = ReadLine(sr);
+            }
 
-                // for archives, LastPos remains 0, so update-it to FileSize
-                // NOTE: do not set LastPos = FileSize for files, cause FileSize is just
-                //       a cached value, and do not reflect actual file size!
-                if (!sr.BaseStream.CanSeek)
-                {
-                    LastPos = FileSize;
-                }
+            // for archives, LastPos remains 0, so update-it to FileSize
+            // NOTE: do not set LastPos = FileSize for files, cause FileSize is just
+            //       a cached value, and do not reflect actual file size!
+            if (!sr.BaseStream.CanSeek)
+            {
+                LastPos = FileSize;
             }
         }
 
         private Encoding DetectEncoding(Stream stream)
         {
-            using (var sr = new StreamReader(stream, Encoding.Default, true,
-                Constants.REVERS_SEARCH_PAGE_SIZE, true))
-            {
-                sr.Peek();
-                return sr.CurrentEncoding;
-            }
+            using var sr = new StreamReader(stream, Encoding.Default, true,
+                Constants.REVERS_SEARCH_PAGE_SIZE, true);
+            sr.Peek();
+            return sr.CurrentEncoding;
         }
 
         private bool CanProcessInPages() =>
@@ -381,33 +366,31 @@ namespace TailP
                 try
                 {
                     ms = new MemoryStream(buf, 0, sz);
-                    using (var sr = new StreamReader(ms, encoding,
-                            from == 0 // ignore BOM only at file beginning
-                            ))
+                    using var sr = new StreamReader(ms, encoding,
+                        @from == 0 // ignore BOM only at file beginning
+                    );
+                    ms = null; // prevent disposing several times
+
+                    if (@from != 0)
                     {
-                        ms = null; // prevent disposing several times
-
-                        if (from != 0)
+                        var nul = sr.ReadLine(); // ignore first line, may be incomplete
+                        var szBytes = encoding.GetByteCount(nul ?? string.Empty);
+                        if (szBytes >= Constants.REVERS_SEARCH_PAGE_SIZE) // extra long line
                         {
-                            var nul = sr.ReadLine(); // ignore first line, may be incomplete
-                            var szBytes = encoding.GetByteCount(nul ?? string.Empty);
-                            if (szBytes >= Constants.REVERS_SEARCH_PAGE_SIZE) // extra long line
-                            {
-                                return false;
-                            }
-                            from += szBytes;
+                            return false;
                         }
+                        @from += szBytes;
+                    }
 
-                        var s = sr.ReadLine();
-                        while (s != null)
+                    var s = sr.ReadLine();
+                    while (s != null)
+                    {
+                        if (encoding.GetByteCount(s) >= Constants.REVERS_SEARCH_PAGE_SIZE)
                         {
-                            if (encoding.GetByteCount(s) >= Constants.REVERS_SEARCH_PAGE_SIZE)
-                            {
-                                return false;
-                            }
-                            ProcessReadLine(s, pageLines);
-                            s = sr.ReadLine();
+                            return false;
                         }
+                        ProcessReadLine(s, pageLines);
+                        s = sr.ReadLine();
                     }
                 }
                 finally
@@ -486,7 +469,7 @@ namespace TailP
 
                 default:
                     throw new InvalidOperationException(
-                        string.Format("Invalid _fileType {0}", _fileType));
+                        $"Invalid _fileType {_fileType}");
             }
 
             return stream;
@@ -494,7 +477,7 @@ namespace TailP
 
         private bool IsFileUnchanged()
         {
-            bool res = FileSize > 0 && LastPos == FileSize;
+            var res = FileSize > 0 && LastPos == FileSize;
             if (res)
             {
                 FlushLogicalLine();
@@ -556,7 +539,7 @@ namespace TailP
             }
             if (showError)
             {
-                error += string.Format(". [{0}]", FileName);
+                error += $". [{FileName}]";
                 _bl.NewLineCallback(TailPbl.GetErrorLine(error), 0);
             }
         }
@@ -593,8 +576,7 @@ namespace TailP
                     return Configuration.StartLocation * FileSize / 100;
 
                 default:
-                    throw new InvalidOperationException(string.Format(
-                        "Invalid _startLocationType {0}", Configuration.StartLocationType));
+                    throw new InvalidOperationException($"Invalid _startLocationType {Configuration.StartLocationType}");
             }
         }
 

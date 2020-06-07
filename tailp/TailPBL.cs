@@ -45,15 +45,6 @@ namespace TailP
 
         public File LastFile
         {
-            get
-            {
-                File result;
-                lock (_lastFileLock)
-                {
-                    result = _lastFile;
-                }
-                return result;
-            }
             set
             {
                 lock (_lastFileLock)
@@ -94,7 +85,7 @@ namespace TailP
         {
             if (index == lastIndex)
             {
-                throw new TailPArgsException(string.Format("Invalid arg {0}", arg));
+                throw new TailPArgsException($"Invalid arg {arg}");
             }
 
             ++index;
@@ -109,7 +100,7 @@ namespace TailP
 
             var lastIndex = args.Length - 1;
             var files = new List<string>();
-            for (int i = 0; i != args.Length; ++i)
+            for (var i = 0; i != args.Length; ++i)
             {
                 var arg = args[i];
 
@@ -234,7 +225,7 @@ namespace TailP
             if (files.Any())
 #pragma warning restore RCS1080 // Use 'Count/Length' property instead of 'Any' method.
             {
-                files.ForEach(x => AddFile(x));
+                files.ForEach(AddFile);
             }
             else
             {
@@ -267,7 +258,7 @@ namespace TailP
             var actualCount = FilesCount;
             if (actualCount != count || firstTimeDetect)
             {
-                UpdateStatus(string.Format("Monitoring {0} files...", actualCount));
+                UpdateStatus($"Monitoring {actualCount} files...");
             }
 
             _lastForceDetect = DateTime.UtcNow;
@@ -308,18 +299,18 @@ namespace TailP
             while (_pushFilesToBeProcess.Any() || _pollFilesToBeProcess.Any())
             {
                 // because pushed queue may growing continuously, we can never exit
-                for (int i = 0;
+                for (var i = 0;
                          i != Constants.MAX_PUSH_PROCESS_COUNT && _pushFilesToBeProcess.Any();
                          ++i)
                 {
-                    if (_pushFilesToBeProcess.TryDequeue(out File pushFile)
+                    if (_pushFilesToBeProcess.TryDequeue(out var pushFile)
                         && pushFile.FileType != FileTypes.Archive)
                     {
                         pushFile.Process();
                     }
                 }
 
-                if (_pollFilesToBeProcess.TryDequeue(out File pollFile)
+                if (_pollFilesToBeProcess.TryDequeue(out var pollFile)
                     && pollFile.FileType != FileTypes.Archive)
                 {
                     pollFile.Process();
@@ -331,7 +322,7 @@ namespace TailP
         {
             try
             {
-                if (!_files.TryGetValue(e.File, out File file))
+                if (!_files.TryGetValue(e.File, out var file))
                 {
                     file = new File(e.File, this, ++_lastFileIndex);
                     _files.TryAdd(e.File, file);
@@ -375,7 +366,7 @@ namespace TailP
         {
             FilesMonitor.Add(pathMask, Configuration.Follow, this);
 
-            UpdateStatus(string.Format("Added {0}", pathMask));
+            UpdateStatus($"Added {pathMask}");
         }
 
         private void ParseStartLocation(string location)
@@ -384,7 +375,7 @@ namespace TailP
             if (loc.Length < 2)
             {
                 throw new TailPArgsException(
-                    string.Format("invalid starting location '{0}'", location));
+                    $"invalid starting location '{location}'");
             }
 
             var type = loc.Substring(loc.Length - 1, 1);
@@ -399,8 +390,7 @@ namespace TailP
             catch (Exception ex)
             {
                 throw new TailPArgsException(
-                    string.Format("invalid starting location '{0}', parse error '{1}'",
-                        location, ex.Message), ex);
+                    $"invalid starting location '{location}', parse error '{ex.Message}'", ex);
             }
         }
 
@@ -409,14 +399,14 @@ namespace TailP
             var num = context.Trim().ToLower();
 
             if (num.Length > 0
-                && int.TryParse(num, out int number)
+                && int.TryParse(num, out var number)
                 && number > 0)
             {
                 return number;
             }
 
             throw new TailPArgsException(
-                string.Format("invalid context number '{0}'", num));
+                $"invalid context number '{num}'");
         }
 
         private void ParseNumLines(string numLines)
@@ -425,7 +415,7 @@ namespace TailP
             if (num.Length < 1)
             {
                 throw new TailPArgsException(
-                    string.Format("invalid number lines '{0}'", num));
+                    $"invalid number lines '{num}'");
             }
 
             Configuration.LinesStartFrom =
@@ -433,14 +423,14 @@ namespace TailP
                     NumLinesStart.Begin :
                     NumLinesStart.End;
 
-            if (int.TryParse(num, out int number))
+            if (int.TryParse(num, out var number))
             {
                 Configuration.LinesStartNumber = number;
             }
             else
             {
                 throw new TailPArgsException(
-                    string.Format("invalid number lines '{0}'", num));
+                    $"invalid number lines '{num}'");
             }
         }
 
@@ -454,7 +444,7 @@ namespace TailP
             catch (ArgumentException)
             {
                 throw new TailPArgsException(
-                    string.Format("Invalid comparison option '{0}'", option));
+                    $"Invalid comparison option '{option}'");
             }
         }
 

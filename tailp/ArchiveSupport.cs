@@ -8,18 +8,18 @@ using System.Linq;
 
 namespace TailP
 {
-    public sealed class ArchiveSupport
+    public static class ArchiveSupport
     {
-        private static readonly HashSet<string> _supportedExtensions = new HashSet<string>()
+        private static readonly HashSet<string> SupportedExtensions = new HashSet<string>()
         {
             ".zip", ".rar", ".7z"
         };
 
-        private static readonly object _lock = new object();
+        private static readonly object Lock = new object();
 
         public static bool TryGetArchivePath(string path, out string archive, out string file)
         {
-            foreach (var extension in _supportedExtensions)
+            foreach (var extension in SupportedExtensions)
             {
                 var split = path.Split(new[] { extension }, 2, StringSplitOptions.None);
                 if (split.Length == 2)
@@ -31,9 +31,9 @@ namespace TailP
                         file = file.Substring(1);
                     }
 
-                    lock (_lock)
+                    lock (Lock)
                     {
-                        return _archives.ContainsKey(archive)
+                        return Archives.ContainsKey(archive)
                             || System.IO.File.Exists(archive);
                     }
                 }
@@ -46,11 +46,11 @@ namespace TailP
 
         public static bool IsValidArchive(string archive)
         {
-            lock (_lock)
+            lock (Lock)
             {
                 try
                 {
-                    if (!_archives.ContainsKey(archive))
+                    if (!Archives.ContainsKey(archive))
                     {
                         GetArchive(archive);
                     }
@@ -98,12 +98,12 @@ namespace TailP
 
         public static IEnumerable<string> EnumerateFiles(string path)
         {
-            if (!TryGetArchivePath(path, out string archive, out string file))
+            if (!TryGetArchivePath(path, out var archive, out var file))
             {
-                throw new TailPArchiveException(string.Format("Invalid archive path {0}", path));
+                throw new TailPArchiveException($"Invalid archive path {path}");
             }
 
-            lock (_lock)
+            lock (Lock)
             {
                 return GetArchiveEntries(archive)
                     .Values
@@ -120,20 +120,20 @@ namespace TailP
         /// <returns></returns>
         public static EntryInfo GetArchivedFileInfo(string path)
         {
-            if (!TryGetArchivePath(path, out string archive, out string file))
+            if (!TryGetArchivePath(path, out var archive, out var file))
             {
-                throw new TailPArchiveException(string.Format("Invalid archive path {0}", path));
+                throw new TailPArchiveException($"Invalid archive path {path}");
             }
 
-            lock (_lock)
+            lock (Lock)
             {
-                if (GetArchiveEntries(archive).TryGetValue(file, out IArchiveEntry entry))
+                if (GetArchiveEntries(archive).TryGetValue(file, out var entry))
                 {
                     return new EntryInfo(entry);
                 }
                 else
                 {
-                    throw new TailPArchiveException(string.Format("File not found {0}", file));
+                    throw new TailPArchiveException($"File not found {file}");
                 }
             }
         }
@@ -141,23 +141,23 @@ namespace TailP
 #pragma warning disable S1135 // Track uses of "TODO" tags
 
         // TODO: to dispose after inactivity timeout
-        private static readonly Dictionary<string, IArchive> _archives =
+        private static readonly Dictionary<string, IArchive> Archives =
 #pragma warning restore S1135 // Track uses of "TODO" tags
             new Dictionary<string, IArchive>(StringComparer.CurrentCultureIgnoreCase);
 
         // archive path / file path inside archive / entry
-        private static readonly Dictionary<string, Dictionary<string, IArchiveEntry>> _archivesEntries =
+        private static readonly Dictionary<string, Dictionary<string, IArchiveEntry>> ArchivesEntries =
             new Dictionary<string, Dictionary<string, IArchiveEntry>>(StringComparer.CurrentCultureIgnoreCase);
 
         private static IArchive GetArchive(string archive)
         {
-            lock (_lock)
+            lock (Lock)
             {
-                if (!_archives.TryGetValue(archive, out IArchive arch))
+                if (!Archives.TryGetValue(archive, out var arch))
                 {
                     var fs = new FileStream(archive, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                     arch = ArchiveFactory.Open(fs);
-                    _archives.Add(archive, arch);
+                    Archives.Add(archive, arch);
                 }
 
                 return arch;
@@ -168,15 +168,15 @@ namespace TailP
         {
             var arch = GetArchive(archive);
 
-            lock (_lock)
+            lock (Lock)
             {
-                if (!_archivesEntries.TryGetValue(archive,
-                    out Dictionary<string, IArchiveEntry> archiveEntries))
+                if (!ArchivesEntries.TryGetValue(archive,
+                    out var archiveEntries))
                 {
                     archiveEntries = arch.Entries
                         .Where(x => !x.IsDirectory)
                         .ToDictionary(x => x.Key);
-                    _archivesEntries.Add(archive, archiveEntries);
+                    ArchivesEntries.Add(archive, archiveEntries);
                 }
 
                 return archiveEntries;
@@ -185,20 +185,20 @@ namespace TailP
 
         public static Stream GetFileStream(string path)
         {
-            if (!TryGetArchivePath(path, out string archive, out string file))
+            if (!TryGetArchivePath(path, out var archive, out var file))
             {
-                throw new TailPArchiveException(string.Format("Invalid archive path {0}", path));
+                throw new TailPArchiveException($"Invalid archive path {path}");
             }
 
             try
             {
-                if (GetArchiveEntries(archive).TryGetValue(file, out IArchiveEntry entry))
+                if (GetArchiveEntries(archive).TryGetValue(file, out var entry))
                 {
                     return entry.OpenEntryStream();
                 }
                 else
                 {
-                    throw new TailPArchiveException(string.Format("File not found {0}", path));
+                    throw new TailPArchiveException($"File not found {path}");
                 }
             }
             catch (InvalidOperationException ex)

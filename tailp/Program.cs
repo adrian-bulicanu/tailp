@@ -26,24 +26,21 @@ namespace TailP
         {
             if (total < 1024)
             {
-                return string.Format("{0} of {1} bytes", processed, total);
+                return $"{processed} of {total} bytes";
             }
             if (total < 1024 * 1024)
             {
-                return string.Format("{0} of {1} KiB",
-                    Math.Round(100.0 * processed / 1024 / 100, 2),
-                    Math.Round(100.0 * total / 1024 / 100, 2));
+                return
+                    $"{Math.Round(100.0 * processed / 1024 / 100, 2)} of {Math.Round(100.0 * total / 1024 / 100, 2)} KiB";
             }
             if (total < 1024 * 1024 * 1024)
             {
-                return string.Format("{0} of {1} MiB",
-                    Math.Round(100.0 * processed / 1024 / 1024 / 100, 2),
-                    Math.Round(100.0 * total / 1024 / 1024 / 100, 2));
+                return
+                    $"{Math.Round(100.0 * processed / 1024 / 1024 / 100, 2)} of {Math.Round(100.0 * total / 1024 / 1024 / 100, 2)} MiB";
             }
 
-            return string.Format("{0} of {1} GiB",
-                Math.Round(100.0 * processed / 1024 / 1024 / 1024 / 100, 2),
-                Math.Round(100.0 * total / 1024 / 1024 / 1024 / 100, 2));
+            return
+                $"{Math.Round(100.0 * processed / 1024 / 1024 / 1024 / 100, 2)} of {Math.Round(100.0 * total / 1024 / 1024 / 1024 / 100, 2)} GiB";
         }
 
         private static void StartUpdatingStatus()
@@ -85,16 +82,11 @@ namespace TailP
                 var totalFiles = _bl.FilesCount;
                 var pendingFiles = _bl.Pending;
                 var files = Configuration.Follow
-                    ? string.Format("{0} files", totalFiles)
-                    : string.Format("{0} of {1}", totalFiles - pendingFiles, totalFiles);
+                    ? $"{totalFiles} files"
+                    : $"{totalFiles - pendingFiles} of {totalFiles}";
 
-                var title = string.Format(
-                    "{0} | {1} last processed: {2} {3} ago ({4}) | ",
-                    ProcessedBytesToString(lastPos, totalSize),
-                    GetEtaText(percents),
-                    Path.GetFileName(_bl.LastFileName),
-                    DateTime.Now.Subtract(_lastChanged).ToHumanReadableString(),
-                    files);
+                var title =
+                    $"{ProcessedBytesToString(lastPos, totalSize)} | {GetEtaText(percents)} last processed: {Path.GetFileName(_bl.LastFileName)} {DateTime.Now.Subtract(_lastChanged).ToHumanReadableString()} ago ({files}) | ";
 
                 Console.Title = title.AppendFromRight(
                     Path.GetFullPath(_bl.LastFileName!), Console.WindowWidth);
@@ -105,7 +97,7 @@ namespace TailP
 
         private static DateTime _lastCalculate = DateTime.UtcNow;
         private static byte _lastPercents = 100;
-        private static readonly Queue<double> _secondsPerPercent = new Queue<double>();
+        private static readonly Queue<double> SecondsPerPercent = new Queue<double>();
         private const int SamplesCount = 5;
 
         private static string GetEtaText(byte percents)
@@ -114,31 +106,31 @@ namespace TailP
             {
                 if (_lastPercents < percents)
                 {
-                    double speed =
+                    var speed =
                     1.0 * (DateTime.UtcNow - _lastCalculate).TotalSeconds
                     / (percents - _lastPercents); //-V3064
 
-                    _secondsPerPercent.Enqueue(speed);
+                    SecondsPerPercent.Enqueue(speed);
                 }
 
                 _lastPercents = percents;
                 _lastCalculate = DateTime.UtcNow;
             }
 
-            while (_secondsPerPercent.Count > SamplesCount)
+            while (SecondsPerPercent.Count > SamplesCount)
             {
-                _secondsPerPercent.Dequeue();
+                SecondsPerPercent.Dequeue();
             }
 
-            var estimated = _secondsPerPercent.Count == SamplesCount
+            var estimated = SecondsPerPercent.Count == SamplesCount
                 ? TimeSpan.FromSeconds(
-                    Math.Round(_secondsPerPercent.Average() * (100 - percents))
+                    Math.Round(SecondsPerPercent.Average() * (100 - percents))
                     )
                 : TimeSpan.FromSeconds(0);
 
             if (estimated > TimeSpan.FromSeconds(5))
             {
-                return string.Format("ETA: {0} |", estimated.ToHumanReadableString());
+                return $"ETA: {estimated.ToHumanReadableString()} |";
             }
 
             if (estimated > TimeSpan.FromSeconds(0))
@@ -164,7 +156,7 @@ namespace TailP
 
             NewLine();
 
-            _bl = new TailPbl((l, i) => WriteLine(l, i));
+            _bl = new TailPbl(WriteLine);
             try
             {
                 _bl.ParseArgs(args);
@@ -200,7 +192,7 @@ namespace TailP
             }
         }
 
-        private static readonly ConsoleColor[] _availableFilterColors = new[]
+        private static readonly ConsoleColor[] AvailableFilterColors = new[]
         {
             ConsoleColor.Yellow,
             ConsoleColor.Green,
@@ -212,25 +204,25 @@ namespace TailP
             ConsoleColor.DarkMagenta
         };
 
-        private static readonly Dictionary<int, ConsoleColor> _filterColors = new Dictionary<int, ConsoleColor>();
-        private static int _lastFilterColor = _availableFilterColors.Length;
+        private static readonly Dictionary<int, ConsoleColor> FilterColors = new Dictionary<int, ConsoleColor>();
+        private static int _lastFilterColor = AvailableFilterColors.Length;
 
         private static ConsoleColor GetFilterBackgroundColor(int colorIndex)
         {
-            if (!_filterColors.TryGetValue(colorIndex, out ConsoleColor color))
+            if (!FilterColors.TryGetValue(colorIndex, out var color))
             {
                 ++_lastFilterColor;
-                if (_lastFilterColor >= _availableFilterColors.Length)
+                if (_lastFilterColor >= AvailableFilterColors.Length)
                 {
                     _lastFilterColor = 0;
                 }
-                color = _availableFilterColors[_lastFilterColor];
-                _filterColors.Add(colorIndex, color);
+                color = AvailableFilterColors[_lastFilterColor];
+                FilterColors.Add(colorIndex, color);
             }
             return color;
         }
 
-        private static readonly ConsoleColor[] _availableFilesColors = new[]
+        private static readonly ConsoleColor[] AvailableFilesColors = new[]
         {
             ConsoleColor.Gray,
             ConsoleColor.Yellow,
@@ -239,20 +231,20 @@ namespace TailP
             ConsoleColor.Magenta,
         };
 
-        private static readonly Dictionary<int, ConsoleColor> _fileColors = new Dictionary<int, ConsoleColor>();
-        private static int _lastFileColor = _availableFilesColors.Length;
+        private static readonly Dictionary<int, ConsoleColor> FileColors = new Dictionary<int, ConsoleColor>();
+        private static int _lastFileColor = AvailableFilesColors.Length;
 
         private static ConsoleColor GetFileForegroundColor(int fileIndex)
         {
-            if (!_fileColors.TryGetValue(fileIndex, out ConsoleColor color))
+            if (!FileColors.TryGetValue(fileIndex, out var color))
             {
                 ++_lastFileColor;
-                if (_lastFileColor >= _availableFilesColors.Length)
+                if (_lastFileColor >= AvailableFilesColors.Length)
                 {
                     _lastFileColor = 0;
                 }
-                color = _availableFilesColors[_lastFileColor];
-                _fileColors.Add(fileIndex, color);
+                color = AvailableFilesColors[_lastFileColor];
+                FileColors.Add(fileIndex, color);
             }
             return color;
         }
@@ -299,11 +291,11 @@ namespace TailP
             }
         }
 
-        private static readonly object _writeLineLock = new object();
+        private static readonly object WriteLineLock = new object();
 
         private static void NewLine()
         {
-            lock (_writeLineLock)
+            lock (WriteLineLock)
             {
                 ResetConsoleColors();
                 Console.WriteLine();
@@ -315,7 +307,7 @@ namespace TailP
         private static void WriteLine(Line line, int fileIndex)
 #pragma warning restore S3242 // Method parameters should be declared with base types
         {
-            lock (_writeLineLock)
+            lock (WriteLineLock)
             {
                 line.ForEach(x =>
                 {
@@ -337,7 +329,7 @@ namespace TailP
 
         private static void WriteMessage(string mess, Types type)
         {
-            lock (_writeLineLock)
+            lock (WriteLineLock)
             {
                 Console.ForegroundColor = TypeToForegroundColor(type, 0);
                 Console.BackgroundColor = TypeToBackgroundColor(type, 0);

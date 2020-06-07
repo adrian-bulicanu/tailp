@@ -8,15 +8,15 @@ namespace TailP
 {
     public static class RegexObjects
     {
-        private static readonly ConcurrentDictionary<string, Regex> _regexs =
+        private static readonly ConcurrentDictionary<string, Regex> Regexs =
             new ConcurrentDictionary<string, Regex>();
 
         public static Regex GetRegexObject(string filter, Func<Regex> createRegex)
         {
-            if (!_regexs.TryGetValue(filter, out Regex result))
+            if (!Regexs.TryGetValue(filter, out var result))
             {
                 result = createRegex.Invoke();
-                _regexs.TryAdd(filter, result);
+                Regexs.TryAdd(filter, result);
             }
 
             return result;

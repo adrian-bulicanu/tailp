@@ -43,7 +43,7 @@ namespace TailP
             {
                 var lastMatch = matches[matches.Count - 1];
                 var lastCharPos = lastMatch.Index + lastMatch.Length;
-                for (int i = lastCharPos; i != normalizedPath.Length; ++i)
+                for (var i = lastCharPos; i != normalizedPath.Length; ++i)
                 {
                     if (normalizedPath[i] != '*' && normalizedPath[i] != '?')
                     {

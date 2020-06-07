@@ -15,8 +15,6 @@ namespace TailP
 
         public int LineNumber => IsEmpty ? 0 : this.First().LineNumber;
 
-        public bool IsFilterFound => this.Any(x => x.IsShowed);
-
         public int FoundShowFiltersCount =>
             this.SelectMany(x => x.FoundShowFilters.Select(y => y))
                 .Distinct()

@@ -11,22 +11,22 @@ namespace TailP
         {
             if (t.TotalMinutes < 1)
             {
-                return string.Format("{0} second(s)", (int)t.TotalSeconds);
+                return $"{(int) t.TotalSeconds} second(s)";
             }
             if (t.TotalHours < 1)
             {
-                return string.Format("{0}:{1:00} minute(s)", (int)t.TotalMinutes, t.Seconds);
+                return $"{(int) t.TotalMinutes}:{t.Seconds:00} minute(s)";
             }
             if (t.TotalDays < 1)
             {
-                return string.Format("{0}:{1:00} hour(s)", (int)t.TotalHours, t.Minutes);
+                return $"{(int) t.TotalHours}:{t.Minutes:00} hour(s)";
             }
             if (t.TotalDays < 2)
             {
-                return string.Format("over {0} hour(s)", (int)t.TotalHours);
+                return $"over {(int) t.TotalHours} hour(s)";
             }
 
-            return string.Format("over {0} day(s)", (int)t.TotalDays);
+            return $"over {(int) t.TotalDays} day(s)";
         }
     }
 }

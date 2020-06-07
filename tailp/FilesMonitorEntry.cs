@@ -20,7 +20,7 @@ namespace TailP
         }
 
         public override string ToString() =>
-            string.Format("file: {0}, sender: {1}", File, Sender);
+            $"file: {File}, sender: {Sender}";
     }
 
     public delegate void FilesMonitorEntryHandler(object sender, FilesMonitorEventArgs e);
@@ -54,7 +54,7 @@ namespace TailP
                 Folder = string.Empty;
                 Mask = Constants.CONSOLE_FILENAME;
             }
-            else if (ArchiveSupport.TryGetArchivePath(path, out string archive, out string file))
+            else if (ArchiveSupport.TryGetArchivePath(path, out var archive, out var file))
             {
                 FileType = FileTypes.Archive;
                 Folder = archive;
@@ -204,7 +204,7 @@ namespace TailP
 
                 default:
                     throw new InvalidOperationException(
-                        string.Format("Unknown FileType {0}", FileType));
+                        $"Unknown FileType {FileType}");
             }
         }
 

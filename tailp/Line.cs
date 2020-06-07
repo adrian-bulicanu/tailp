@@ -68,7 +68,7 @@ namespace TailP
                 throw new ArgumentOutOfRangeException(nameof(start));
             }
 
-            Line result = new Line(this, false);
+            var result = new Line(this, false);
 
             foreach (var item in this)
             {
@@ -219,9 +219,9 @@ namespace TailP
             while (Length > resultStringLength)
             {
                 // truncate the longest element
-                int longestIndex = -1;
-                int longestLength = -1;
-                for (int i = 0; i != Count; ++i)
+                var longestIndex = -1;
+                var longestLength = -1;
+                for (var i = 0; i != Count; ++i)
                 {
                     if (this[i].Type == Types.None
                         && this[i].Text.Length > longestLength)

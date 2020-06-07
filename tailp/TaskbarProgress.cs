@@ -16,6 +16,7 @@ namespace TailP
         Indeterminate = 0x1,
         Normal = 0x2,
         Error = 0x4,
+        // ReSharper disable once UnusedMember.Global
         Paused = 0x8
     }
 
@@ -67,10 +68,10 @@ namespace TailP
 
     public static class TaskbarProgress
     {
-        private static readonly NativeMethods.ITaskbarList3 _taskbarInstance =
+        private static readonly NativeMethods.ITaskbarList3 TaskbarInstance =
             (NativeMethods.ITaskbarList3)new NativeMethods.TaskbarInstance();
 
-        private static readonly bool _taskbarSupported = Environment.OSVersion.Version >= new Version(6, 1);
+        private static readonly bool TaskbarSupported = Environment.OSVersion.Version >= new Version(6, 1);
         private static IntPtr _consoleHandle = IntPtr.Zero;
 
         private static IntPtr GetConsoleHandle()
@@ -83,24 +84,14 @@ namespace TailP
             return _consoleHandle;
         }
 
-        public static void SetState(IntPtr windowHandle, TaskbarStates taskbarState)
-        {
-            if (_taskbarSupported) _taskbarInstance.SetProgressState(windowHandle, taskbarState);
-        }
-
-        public static void SetValue(IntPtr windowHandle, double progressValue, double progressMax)
-        {
-            if (_taskbarSupported) _taskbarInstance.SetProgressValue(windowHandle, (ulong)progressValue, (ulong)progressMax);
-        }
-
         public static void SetState(TaskbarStates taskbarState)
         {
-            if (_taskbarSupported) _taskbarInstance.SetProgressState(GetConsoleHandle(), taskbarState);
+            if (TaskbarSupported) TaskbarInstance.SetProgressState(GetConsoleHandle(), taskbarState);
         }
 
         public static void SetValue(double progressValue, double progressMax)
         {
-            if (_taskbarSupported) _taskbarInstance.SetProgressValue(GetConsoleHandle(), (ulong)progressValue, (ulong)progressMax);
+            if (TaskbarSupported) TaskbarInstance.SetProgressValue(GetConsoleHandle(), (ulong)progressValue, (ulong)progressMax);
         }
     }
 }

@@ -7,9 +7,9 @@ namespace TailP
 {
     public static class FilesMonitor
     {
-        private static readonly object _monitorEntriesLock = new object();
+        private static readonly object MonitorEntriesLock = new object();
 
-        private static readonly HashSet<FilesMonitorEntry> _monitorEntries =
+        private static readonly HashSet<FilesMonitorEntry> MonitorEntries =
             new HashSet<FilesMonitorEntry>();
 
 #pragma warning disable S3264 // Events should be invoked
@@ -29,9 +29,9 @@ namespace TailP
         public static void ForceProcess()
         {
             List<FilesMonitorEntry> entries;
-            lock (_monitorEntriesLock)
+            lock (MonitorEntriesLock)
             {
-                entries = _monitorEntries.ToList();
+                entries = MonitorEntries.ToList();
             }
             entries.ForEach(x => x.ForceProcess());
         }
@@ -41,9 +41,9 @@ namespace TailP
             var entry = new FilesMonitorEntry(path, bl);
 
             bool added;
-            lock (_monitorEntriesLock)
+            lock (MonitorEntriesLock)
             {
-                added = _monitorEntries.Add(entry);
+                added = MonitorEntries.Add(entry);
             }
 
             if (added)
