@@ -21,10 +21,10 @@
   <Import Sdk="Microsoft.NET.Sdk" Project="Sdk.targets" />
   
   <PropertyGroup>
-    <PreBuildEvent>
+    <PreBuildEvent Condition="'$(OS)' == 'Windows_NT' ">>
       %25ComSpec%25 /c "powershell.exe -Command "((Get-Date).ToUniversalTime()).ToString(\""yyyy-MM-dd HH:mm:ss UTC\"")" &gt; "$(ProjectDir)\Resources\BuildDate.txt"
     </PreBuildEvent>
-    <PostBuildEvent>
+    <PostBuildEvent Condition="'$(OS)' == 'Windows_NT' ">>
       if $(ConfigurationName) == Release (
       del "$(TargetDir)tmp.exe"
       rename "$(TargetPath)" "tmp.exe"

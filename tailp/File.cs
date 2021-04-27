@@ -175,10 +175,7 @@ namespace TailP
                             break;
 
                         case FileTypes.ArchivedFile:
-                            if (_fileInfo == null)
-                            {
-                                _fileInfo = new FileInfoCache(_file);
-                            }
+                            _fileInfo ??= new FileInfoCache(_file);
                             break;
 
                         default:
