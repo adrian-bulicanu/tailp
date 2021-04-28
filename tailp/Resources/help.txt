@@ -21,8 +21,6 @@ DETAILED REFERENCE
     <file(s)>:
         One or more files. Masks * and ? are allowed.
         Supported archives: ZIP, RAR, 7z.
-          * RAR5 not supported
-          * SOLID RAR archives not supported
         Examples:
           c:\*.txt                All text files in c:\, including subdirectories
           c:\1.rar                All files in archive 1.rar.

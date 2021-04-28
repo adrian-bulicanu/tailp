@@ -502,12 +502,17 @@ namespace TailP
 
         private string GetVersion()
         {
-            var assembly = Assembly.GetExecutingAssembly().GetName();
+            if (Assembly
+                .GetExecutingAssembly()
+                .GetCustomAttributes(typeof(AssemblyInformationalVersionAttribute), false)
+                is AssemblyInformationalVersionAttribute[] attr && attr.Any())
+            {
+                return Constants.HELP_VERSION_HEADER
+                       + Environment.NewLine
+                       + string.Format(Constants.HELP_VERSION_FORMAT, attr.First().InformationalVersion);
+            }
 
-            return Constants.HELP_VERSION_HEADER
-                + Environment.NewLine
-                + string.Format(Constants.HELP_VERSION_FORMAT, assembly.Name, assembly.Version,
-                    tailp.Properties.Resources.BuildDate);
+            return string.Format(Constants.HELP_VERSION_FORMAT, "Unknown");
         }
 
         public void Dispose() => _processEvent.Dispose();

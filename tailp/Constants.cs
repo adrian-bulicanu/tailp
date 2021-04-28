@@ -42,7 +42,7 @@ namespace TailP
 
         public const string FILENAME_PRINT_FORMAT = @"==> {0} <==";
         public const string HELP_VERSION_HEADER = @"VERSION";
-        public const string HELP_VERSION_FORMAT = @"    {0} {1} / {2}";
+        public const string HELP_VERSION_FORMAT = @"    {0}";
         public const string CONTEXT_LINE_DELIMITER = @"--";
 
         public const string TAB_REPLACER = "    ";
