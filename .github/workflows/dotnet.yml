@@ -19,7 +19,13 @@ jobs:
         dotnet-version: 5.0.x
     - name: Restore dependencies
       run: dotnet restore
-    - name: Publish
-      run: dotnet publish --no-restore
     - name: Test
       run: dotnet test --no-build --verbosity normal
+    - name: Publish
+      run: dotnet publish --no-restore --configuration Release tailp/tailp.csproj
+    - name: Archive production artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: tailp executable
+        path: |
+          tailp/bin/Release/win-x64/publish/tailp.exe
