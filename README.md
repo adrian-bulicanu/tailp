@@ -1,4 +1,4 @@
-[![Build status](https://ci.appveyor.com/api/projects/status/tylwn35rrw2hln7j?svg=true)](https://ci.appveyor.com/project/adrian-bulicanu/tailp)
+[![.NET](https://github.com/adrian-bulicanu/tailp/actions/workflows/dotnet.yml/badge.svg)](https://github.com/adrian-bulicanu/tailp/actions/workflows/dotnet.yml)
 
 # tailp
 
@@ -15,7 +15,7 @@ See the [help.txt](tailp/Resources/help.txt) file for details.
 
 ## Prerequisites
 
-.NET 4.5.2
+.NET 5
 
 ## License
 
