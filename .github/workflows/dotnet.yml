@@ -20,7 +20,7 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
     - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet test --no-restore --verbosity normal
     - name: Publish
       run: dotnet publish --no-restore --configuration Release tailp/tailp.csproj
     - name: Archive production artifacts
