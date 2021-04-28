@@ -30,12 +30,13 @@ jobs:
       run: dotnet restore
       
     - name: Test
-      run: dotnet test --no-restore --verbosity normal
+      run: dotnet test --no-restore
       
     - name: Determine Version and update AssemblyInfo
       uses: gittools/actions/gitversion/execute@v0.9.7
       with:
         updateAssemblyInfo: true
+        updateAssemblyInfoFilename: 'tailp/Properties/AssemblyInfo.cs'
       
     - name: Publish
       run: dotnet publish --no-restore --configuration Release tailp/tailp.csproj
