@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using TailP;
 using System;
+using tailp;
+
 // ReSharper disable ConvertToConstant.Local
 
 namespace tailpTests

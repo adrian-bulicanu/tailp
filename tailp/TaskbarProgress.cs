@@ -1,17 +1,21 @@
 ﻿// This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
+
 using System;
 using System.Runtime.InteropServices;
+
 // ReSharper disable SuspiciousTypeConversion.Global
 
-namespace TailP
+namespace tailp
 {
     // thanks to https://stackoverflow.com/a/24187171
     [Flags]
     public enum TaskbarStates
     {
 #pragma warning disable S2346 // Flags enumerations zero-value members should be named "None"
+#pragma warning disable CA1008 // Enums should have zero value
         NoProgress = 0,
+#pragma warning restore CA1008 // Enums should have zero value
 #pragma warning restore S2346 // Flags enumerations zero-value members should be named "None"
         Indeterminate = 0x1,
         Normal = 0x2,
@@ -63,7 +67,9 @@ namespace TailP
         }
 
         [DllImport("kernel32.dll")]
+#pragma warning disable CA5392 // Use DefaultDllImportSearchPaths attribute for P/Invokes
         internal static extern IntPtr GetConsoleWindow();
+#pragma warning restore CA5392 // Use DefaultDllImportSearchPaths attribute for P/Invokes
     }
 
     public static class TaskbarProgress

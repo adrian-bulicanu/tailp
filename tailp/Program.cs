@@ -1,21 +1,25 @@
 ﻿// This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
+
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Resources;
 using System.Threading;
 
-namespace TailP
+[assembly: CLSCompliant(true)]
+[assembly: NeutralResourcesLanguage("en-US")]
+namespace tailp
 {
     internal static class Program
     {
         // used hardcoded colors instead of default, because on Ctrl-C color changes to last used
-        private const ConsoleColor DefaultBackground = ConsoleColor.Black;
+        private const ConsoleColor DEFAULT_BACKGROUND = ConsoleColor.Black;
 
-        private const ConsoleColor DefaultForeground = ConsoleColor.Gray;
+        private const ConsoleColor DEFAULT_FOREGROUND = ConsoleColor.Gray;
 
-        private const int StatusTimerPeriodMs = 1000;
+        private const int STATUS_TIMER_PERIOD_MS = 1000;
 
         private static Timer _statusTimer;
         private static long _lastPos;
@@ -46,7 +50,7 @@ namespace TailP
         private static void StartUpdatingStatus()
         {
             _statusTimer = new Timer(
-                (_) => UpdateStatus(), null, 0, StatusTimerPeriodMs);
+                (_) => UpdateStatus(), null, 0, STATUS_TIMER_PERIOD_MS);
         }
 
         private static void UpdateProgressBar(byte percents)
@@ -81,7 +85,7 @@ namespace TailP
             {
                 var totalFiles = _bl.FilesCount;
                 var pendingFiles = _bl.Pending;
-                var files = Configuration.Follow
+                var files = Configs.Follow
                     ? $"{totalFiles} files"
                     : $"{totalFiles - pendingFiles} of {totalFiles}";
 
@@ -98,7 +102,7 @@ namespace TailP
         private static DateTime _lastCalculate = DateTime.UtcNow;
         private static byte _lastPercents = 100;
         private static readonly Queue<double> SecondsPerPercent = new Queue<double>();
-        private const int SamplesCount = 5;
+        private const int SAMPLES_COUNT = 5;
 
         private static string GetEtaText(byte percents)
         {
@@ -117,12 +121,12 @@ namespace TailP
                 _lastCalculate = DateTime.UtcNow;
             }
 
-            while (SecondsPerPercent.Count > SamplesCount)
+            while (SecondsPerPercent.Count > SAMPLES_COUNT)
             {
                 SecondsPerPercent.Dequeue();
             }
 
-            var estimated = SecondsPerPercent.Count == SamplesCount
+            var estimated = SecondsPerPercent.Count == SAMPLES_COUNT
                 ? TimeSpan.FromSeconds(
                     Math.Round(SecondsPerPercent.Average() * (100 - percents))
                     )
@@ -143,8 +147,8 @@ namespace TailP
 
         private static void ResetConsoleColors()
         {
-            Console.BackgroundColor = DefaultBackground;
-            Console.ForegroundColor = DefaultForeground;
+            Console.BackgroundColor = DEFAULT_BACKGROUND;
+            Console.ForegroundColor = DEFAULT_FOREGROUND;
         }
 
         private static TailPbl _bl;
@@ -165,7 +169,7 @@ namespace TailP
 
                 _bl.StartProcess();
 
-                if (Configuration.Follow)
+                if (Configs.Follow)
                 {
                     Console.ReadLine();
                 }
@@ -175,14 +179,16 @@ namespace TailP
             }
             catch (TailPHelpException)
             {
-                WriteMessage(_bl.GetHelp(), Types.None);
+                WriteMessage(TailPbl.GetHelp(), Types.None);
             }
             catch (TailPArgsException ex)
             {
                 WriteMessage(ex.ToString(), Types.Error);
-                WriteMessage(_bl.GetHelp(), Types.None);
+                WriteMessage(TailPbl.GetHelp(), Types.None);
             }
+#pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception ex)
+#pragma warning restore CA1031 // Do not catch general exception types
             {
                 WriteMessage(ex.ToString(), Types.Error);
             }
@@ -269,9 +275,9 @@ namespace TailP
                     return ConsoleColor.DarkGray;
 
                 default:
-                    return Configuration.Follow
+                    return Configs.Follow
                                 ? GetFileForegroundColor(fileIndex)
-                                : DefaultForeground;
+                                : DEFAULT_FOREGROUND;
             }
         }
 
@@ -287,7 +293,7 @@ namespace TailP
                     return ConsoleColor.DarkRed;
 
                 default:
-                    return DefaultBackground;
+                    return DEFAULT_BACKGROUND;
             }
         }
 

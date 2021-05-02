@@ -1,14 +1,16 @@
 ﻿// This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
+
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
 
-namespace TailP
+namespace tailp
 {
 #pragma warning disable S101 // Types should be named in camel case
 
@@ -43,14 +45,11 @@ namespace TailP
         private readonly object _lastFileLock = new object();
         private File _lastFile;
 
-        public File LastFile
+        public void SetLastFile(File value)
         {
-            set
+            lock (_lastFileLock)
             {
-                lock (_lastFileLock)
-                {
-                    _lastFile = value;
-                }
+                _lastFile = value;
             }
         }
 
@@ -81,7 +80,7 @@ namespace TailP
                 .Count();
 
         // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
-        private void AdjustAndCheckIndex(ref int index, int lastIndex, string arg)
+        private static void AdjustAndCheckIndex(ref int index, int lastIndex, string arg)
         {
             if (index == lastIndex)
             {
@@ -93,7 +92,7 @@ namespace TailP
 
         public void ParseArgs(string[] args)
         {
-            if (args.Length < 1)
+            if (args is null || args.Length < 1)
             {
                 throw new TailPArgsException("Invalid args");
             }
@@ -117,7 +116,7 @@ namespace TailP
 
                     case "-f":
                     case "--follow":
-                        Configuration.Follow = true;
+                        Configs.Follow = true;
                         break;
 
                     case "-n":
@@ -129,51 +128,51 @@ namespace TailP
                     case "-q":
                     case "--quiet":
                     case "--silent":
-                        Configuration.ShowFile = false;
+                        Configs.ShowFile = false;
                         break;
 
                     case "-v":
                     case "--verbose":
-                        Configuration.ShowFile = true;
+                        Configs.ShowFile = true;
                         break;
 
                     case "-nr":
                     case "--non-recursive":
-                        Configuration.Recursive = false;
+                        Configs.Recursive = false;
                         break;
 
                     case "-l":
                     case "--logical-lines":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
-                        Configuration.LogicalLineMarker = args[i];
+                        Configs.LogicalLineMarker = args[i];
                         break;
 
                     case "-N":
                     case "--line-number":
-                        Configuration.ShowLineNumber = true;
+                        Configs.ShowLineNumber = true;
                         break;
 
                     case "-R":
                     case "--regex":
-                        Configuration.Regex = true;
+                        Configs.Regex = true;
                         break;
 
                     case "-S":
                     case "--show":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
-                        Configuration.FiltersShow.Add(args[i]);
+                        Configs.FiltersShow.Add(args[i]);
                         break;
 
                     case "-H":
                     case "--hide":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
-                        Configuration.FiltersHide.Add(args[i]);
+                        Configs.FiltersHide.Add(args[i]);
                         break;
 
                     case "-L":
                     case "--highlight":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
-                        Configuration.FiltersHighlight.Add(args[i]);
+                        Configs.FiltersHighlight.Add(args[i]);
                         break;
 
                     case "-o":
@@ -184,31 +183,31 @@ namespace TailP
 
                     case "-a":
                     case "--all":
-                        Configuration.AllFilters = true;
+                        Configs.AllFilters = true;
                         break;
 
                     case "-t":
                     case "--truncate":
-                        Configuration.Truncate = true;
+                        Configs.Truncate = true;
                         break;
 
                     case "-A":
                     case "--after-context":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
-                        Configuration.ContextAfter = ParseAndGetContextNumber(args[i]);
+                        Configs.ContextAfter = ParseAndGetContextNumber(args[i]);
                         break;
 
                     case "-B":
                     case "--before-context":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
-                        Configuration.ContextBefore = ParseAndGetContextNumber(args[i]);
+                        Configs.ContextBefore = ParseAndGetContextNumber(args[i]);
                         break;
 
                     case "-C":
                     case "--context":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
-                        Configuration.ContextAfter =
-                            Configuration.ContextBefore = ParseAndGetContextNumber(args[i]);
+                        Configs.ContextAfter =
+                            Configs.ContextBefore = ParseAndGetContextNumber(args[i]);
                         break;
 
                     default:
@@ -268,9 +267,9 @@ namespace TailP
         {
             Tick();
 
-            Configuration.StartLocation = 0; // monitor new files from beginning
+            Configs.StartLocation = 0; // monitor new files from beginning
 
-            if (Configuration.Follow)
+            if (Configs.Follow)
             {
                 new Thread(() =>
                 {
@@ -291,6 +290,7 @@ namespace TailP
             }
         }
 
+#pragma warning disable CA2000 // Dispose objects before losing scope
         private void Tick()
         {
             ForceDetect();
@@ -317,6 +317,7 @@ namespace TailP
                 }
             }
         }
+#pragma warning restore CA2000 // Dispose objects before losing scope
 
         private void Created(object sender, FilesMonitorEventArgs e)
         {
@@ -327,9 +328,9 @@ namespace TailP
                     file = new File(e.File, this, ++_lastFileIndex);
                     _files.TryAdd(e.File, file);
 
-                    if (!Configuration.IsShowFileDefined && _files.Count > 1)
+                    if (!Configs.IsShowFileDefined && _files.Count > 1)
                     {
-                        Configuration.ShowFile = true;
+                        Configs.ShowFile = true;
                     }
 
                     if (file.FileType == FileTypes.Archive)
@@ -349,7 +350,9 @@ namespace TailP
                     _pollFilesToBeProcess.Enqueue(file);
                 }
             }
+#pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception ex)
+#pragma warning restore CA1031 // Do not catch general exception types
             {
                 NewLineCallback(GetErrorLine(ex.Message), 0);
             }
@@ -360,18 +363,18 @@ namespace TailP
         private void Deleted(object sender, FilesMonitorEventArgs e) =>
             _files.TryRemove(e.File, out _);
 
-        private void UpdateStatus(string s) => Console.Title = s;
+        private static void UpdateStatus(string s) => Console.Title = s;
 
         private void AddFile(string pathMask)
         {
-            FilesMonitor.Add(pathMask, Configuration.Follow, this);
+            FilesMonitor.Add(pathMask, Configs.Follow, this);
 
             UpdateStatus($"Added {pathMask}");
         }
 
-        private void ParseStartLocation(string location)
+        private static void ParseStartLocation(string location)
         {
-            var loc = location.Trim().ToLower();
+            var loc = location.Trim().ToUpperInvariant();
             if (loc.Length < 2)
             {
                 throw new TailPArgsException(
@@ -379,13 +382,13 @@ namespace TailP
             }
 
             var type = loc.Substring(loc.Length - 1, 1);
-            var start = loc.Substring(0, loc.Length - 1);
+            var start = loc[..^1];
 
             try
             {
-                Configuration.StartLocationType = (StartLocationTypes)Enum.Parse(
+                Configs.StartLocationType = (StartLocationTypes)Enum.Parse(
                     typeof(StartLocationTypes), type);
-                Configuration.StartLocation = long.Parse(start);
+                Configs.StartLocation = long.Parse(start, CultureInfo.InvariantCulture);
             }
             catch (Exception ex)
             {
@@ -394,9 +397,9 @@ namespace TailP
             }
         }
 
-        private int ParseAndGetContextNumber(string context)
+        private static int ParseAndGetContextNumber(string context)
         {
-            var num = context.Trim().ToLower();
+            var num = context.Trim().ToUpperInvariant();
 
             if (num.Length > 0
                 && int.TryParse(num, out var number)
@@ -409,23 +412,23 @@ namespace TailP
                 $"invalid context number '{num}'");
         }
 
-        private void ParseNumLines(string numLines)
+        private static void ParseNumLines(string numLines)
         {
-            var num = numLines.Trim().ToLower();
+            var num = numLines.Trim().ToUpperInvariant();
             if (num.Length < 1)
             {
                 throw new TailPArgsException(
                     $"invalid number lines '{num}'");
             }
 
-            Configuration.LinesStartFrom =
+            Configs.LinesStartFrom =
                 num[0] == '+' ?
                     NumLinesStart.Begin :
                     NumLinesStart.End;
 
             if (int.TryParse(num, out var number))
             {
-                Configuration.LinesStartNumber = number;
+                Configs.LinesStartNumber = number;
             }
             else
             {
@@ -434,11 +437,11 @@ namespace TailP
             }
         }
 
-        private void ParseComparisonOption(string option)
+        private static void ParseComparisonOption(string option)
         {
             try
             {
-                Configuration.ComparisonOptions = (StringComparison)Enum.Parse(
+                Configs.ComparisonOptions = (StringComparison)Enum.Parse(
                     typeof(StringComparison), option);
             }
             catch (ArgumentException)
@@ -472,35 +475,39 @@ namespace TailP
 
         public void PrintLogicalLine(LogicalLine logicalLine, int fileIndex)
         {
-            if (!logicalLine.IsPrinted)
+            if (logicalLine is null) throw new ArgumentNullException(nameof(logicalLine));
+
+            if (logicalLine.IsPrinted)
             {
-                logicalLine.ForEach(x => NewLineCallback(x, fileIndex));
-                logicalLine.IsPrinted = true;
+                return;
             }
+
+            logicalLine.ForEach(x => NewLineCallback(x, fileIndex));
+            logicalLine.IsPrinted = true;
         }
 
         private string _lastPrintedFileName = string.Empty;
 
         public void PrintFileName(string fileName, bool force)
         {
-            if (Configuration.ShowFile && (force || _lastPrintedFileName != fileName))
+            if (Configs.ShowFile && (force || _lastPrintedFileName != fileName))
             {
                 NewLineCallback(new Line()
                 {
                     new Token(Types.NewLine, string.Empty),
-                    new Token(Types.FileName, string.Format(
+                    new Token(Types.FileName, string.Format(CultureInfo.InvariantCulture,
                         Constants.FILENAME_PRINT_FORMAT, Path.GetFullPath(fileName)))
                 }, 0);
                 _lastPrintedFileName = fileName;
             }
         }
 
-        public string GetHelp() =>
+        public static string GetHelp() =>
             GetVersion()
           + Environment.NewLine
-          + tailp.Properties.Resources.help;
+          + Properties.Resources.help;
 
-        private string GetVersion()
+        private static string GetVersion()
         {
             if (Assembly
                 .GetExecutingAssembly()
@@ -509,10 +516,12 @@ namespace TailP
             {
                 return Constants.HELP_VERSION_HEADER
                        + Environment.NewLine
-                       + string.Format(Constants.HELP_VERSION_FORMAT, attr.First().InformationalVersion);
+                       + string.Format(CultureInfo.InvariantCulture,
+                           Constants.HELP_VERSION_FORMAT, attr.First().InformationalVersion);
             }
 
-            return string.Format(Constants.HELP_VERSION_FORMAT, "Unknown");
+            return string.Format(CultureInfo.InvariantCulture,
+                Constants.HELP_VERSION_FORMAT, "Unknown");
         }
 
         public void Dispose() => _processEvent.Dispose();

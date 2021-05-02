@@ -1,8 +1,9 @@
 ﻿// This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
+
 using System;
 
-namespace TailP
+namespace tailp
 {
     public class Token
     {
@@ -37,10 +38,7 @@ namespace TailP
                 return false;
             }
 
-            if (!(obj is Token other))
-            {
-                return false;
-            }
+            var other = (Token)obj;
 
             return Type == other.Type
                    && Text == other.Text

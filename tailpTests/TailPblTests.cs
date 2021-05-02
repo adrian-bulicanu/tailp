@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using TailP;
 using System;
+using tailp;
+
 // ReSharper disable ConvertToConstant.Local
 // ReSharper disable ConditionIsAlwaysTrueOrFalse
 
@@ -39,7 +40,7 @@ namespace tailpTests
         public void ParseArgsTest02()
         {
             _fixture.ParseArgs(new[] { @"-f", @"dummy_file" });
-            var act = Configuration.Follow;
+            var act = Configs.Follow;
             var exp = true;
             Assert.AreEqual(exp, act);
         }
@@ -48,7 +49,7 @@ namespace tailpTests
         public void ParseArgsTest03()
         {
             _fixture.ParseArgs(new[] { @"--logical-lines", @"<<<", @"dummy_file" });
-            var act = Configuration.LogicalLineMarker;
+            var act = Configs.LogicalLineMarker;
             var exp = @"<<<";
             Assert.AreEqual(exp, act);
         }
@@ -56,7 +57,7 @@ namespace tailpTests
         [TestMethod()]
         public void GetHelpTest()
         {
-            var act = _fixture.GetHelp();
+            var act = TailPbl.GetHelp();
             Assert.AreNotEqual(string.Empty, act);
         }
     }

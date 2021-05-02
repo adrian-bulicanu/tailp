@@ -1,12 +1,13 @@
 ﻿// This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
+
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace TailP
+namespace tailp
 {
     public class FilesMonitorEventArgs : EventArgs
     {
@@ -76,7 +77,7 @@ namespace TailP
         private void ForceProcessRegular() =>
             InternalCreatedOrChanged(this, Path.Combine(Folder, Mask));
 
-        private bool IsExceptionIgnored(Exception ex) =>
+        private static bool IsExceptionIgnored(Exception ex) =>
             ex is UnauthorizedAccessException
             || ex is PathTooLongException
             || ex is System.Security.SecurityException
@@ -156,7 +157,7 @@ namespace TailP
             }
 
             foreach (var f in DirectoryEnumerateFiles(Folder, Mask,
-                Configuration.Recursive ?
+                Configs.Recursive ?
                     SearchOption.AllDirectories :
                     SearchOption.TopDirectoryOnly))
             {
@@ -272,17 +273,17 @@ namespace TailP
 
                 _watcher.Error += (s, e) =>
                 {
-                    Task.Delay(Constants.WAIT_ON_ERROR).ContinueWith((_) =>
+                    Task.Delay(Constants.WAIT_ON_ERROR).ContinueWith(_ =>
                     {
                         lock (_watcherLock)
                         {
                             DeleteWatcher();
                             BeginMonitor();
                         }
-                    });
+                    }, TaskScheduler.Default);
                 };
 
-                _watcher.IncludeSubdirectories = Configuration.Recursive;
+                _watcher.IncludeSubdirectories = Configs.Recursive;
                 _watcher.EnableRaisingEvents = true;
             }
         }
@@ -308,12 +309,14 @@ namespace TailP
         {
             if (obj == null) return false;
 
-            if (!(obj is FilesMonitorEntry f)) return false;
+            var f = (FilesMonitorEntry)obj;
 
-            return Mask.Equals(f.Mask, StringComparison.InvariantCultureIgnoreCase)
-                && Folder.Equals(f.Folder, StringComparison.InvariantCultureIgnoreCase);
+            return Mask.Equals(f.Mask, StringComparison.OrdinalIgnoreCase)
+                && Folder.Equals(f.Folder, StringComparison.OrdinalIgnoreCase);
         }
 
-        public override int GetHashCode() => Mask.GetHashCode() ^ Folder.GetHashCode();
+        public override int GetHashCode() =>
+              Mask.GetHashCode(StringComparison.OrdinalIgnoreCase)
+            ^ Folder.GetHashCode(StringComparison.OrdinalIgnoreCase);
     }
 }

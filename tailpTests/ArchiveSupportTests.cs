@@ -1,8 +1,7 @@
-﻿using System;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using TailP;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using System.IO;
+using tailp;
 
 // ReSharper disable ConditionIsAlwaysTrueOrFalse
 // ReSharper disable ConvertToConstant.Local

@@ -1,12 +1,13 @@
 ﻿// This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
+
 using System;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 
-namespace TailP
+namespace tailp
 {
     public sealed class File : IDisposable
     {
@@ -40,7 +41,7 @@ namespace TailP
         }
 
         private LogicalLine _logicalLine = new LogicalLine();
-        private readonly LogicalLinesHistory _logicalLinesHistory;
+        private readonly LogicalLinesHistoryQueue _logicalLinesHistoryQueue;
         private int _lineNumber;
         private bool _isFilenameNeeded = true;
         private readonly string _file;
@@ -135,12 +136,12 @@ namespace TailP
 
         public File(string file, TailPbl bl, int fileIndex)
         {
-            if (string.IsNullOrEmpty(file)) throw new ArgumentException(nameof(file));
+            if (string.IsNullOrEmpty(file)) throw new ArgumentException(@"Param cannot be empty", nameof(file));
             _bl = bl ?? throw new ArgumentNullException(nameof(bl));
             _file = file;
             _fileIndex = fileIndex;
-            _logicalLinesHistory = new LogicalLinesHistory(Math.Max(1, Configuration.ContextBefore));
-            _startFromNum = Configuration.LinesStartNumber;
+            _logicalLinesHistoryQueue = new LogicalLinesHistoryQueue(Math.Max(1, Configs.ContextBefore));
+            _startFromNum = Configs.LinesStartNumber;
 
             if (_file == Constants.CONSOLE_FILENAME)
             {
@@ -183,7 +184,9 @@ namespace TailP
                                 $"Unknown FileType {_fileType}");
                     }
                 }
+#pragma warning disable CA1031 // Do not catch general exception types
                 catch
+#pragma warning restore CA1031 // Do not catch general exception types
                 {
                     _fileInfo = null;
                 }
@@ -200,7 +203,7 @@ namespace TailP
             {
                 return;
             }
-            _bl.LastFile = this;
+            _bl.SetLastFile(this);
 
             stream = GetStream();
             FindLastLinesInStream(stream);
@@ -213,7 +216,7 @@ namespace TailP
             FlushLogicalLine();
             ShowError(error);
 
-            if (Configuration.Follow)
+            if (Configs.Follow)
             {
                 ResetCounters();
             }
@@ -230,7 +233,9 @@ namespace TailP
                 {
                     ProcessInternal(ref stream);
                 }
+#pragma warning disable CA1031 // Do not catch general exception types
                 catch (Exception ex)
+#pragma warning restore CA1031 // Do not catch general exception types
                 {
                     ProcessError(ex.Message);
                 }
@@ -246,15 +251,15 @@ namespace TailP
         private void FindLastLinesInStream(Stream stream)
         {
             if (_lastLinesProcessed
-                || Configuration.LinesStartFrom != NumLinesStart.End)
+                || Configs.LinesStartFrom != NumLinesStart.End)
             {
                 return;
             }
 
             if (_startFromNum != 0)
             {
-                var logicalLinesHistory = new LogicalLinesHistory(
-                    _startFromNum * (Configuration.ContextLines + 1));
+                var logicalLinesHistory = new LogicalLinesHistoryQueue(
+                    _startFromNum * (Configs.ContextLines + 1));
                 if (stream.CanSeek)
                 {
                     if (!ProcessStreamInPages(stream, logicalLinesHistory))
@@ -273,7 +278,7 @@ namespace TailP
                 FlushLogicalLine(logicalLinesHistory);
                 while (logicalLinesHistory.Any())
                 {
-                    var forPrinting = new LogicalLinesHistory();
+                    var forPrinting = new LogicalLinesHistoryQueue();
                     PrepareLogicalLineForPrinting(logicalLinesHistory.Dequeue(), forPrinting);
                     PrintLogicalLines(forPrinting);
                 }
@@ -283,7 +288,7 @@ namespace TailP
             _lastLinesProcessed = true;
         }
 
-        private void ProcessStreamFromLastPosToEnd(Stream stream, LogicalLinesHistory logicalLines)
+        private void ProcessStreamFromLastPosToEnd(Stream stream, LogicalLinesHistoryQueue logicalLines)
         {
             var encoding = Encoding.Default;
 
@@ -315,7 +320,7 @@ namespace TailP
             }
         }
 
-        private Encoding DetectEncoding(Stream stream)
+        private static Encoding DetectEncoding(Stream stream)
         {
             using var sr = new StreamReader(stream, Encoding.Default, true,
                 Constants.REVERS_SEARCH_PAGE_SIZE, true);
@@ -331,14 +336,14 @@ namespace TailP
                 //       when file is reading in pages from end to begin.
                 //       for the moment, disable the optimization when before context
                 //       is needed
-                && (!Configuration.IsContextBeforeUsed);
+                && (!Configs.IsContextBeforeUsed);
 
         // Optimization used:
         //       read from end in pages by XXX bytes to a memory stream
         //       and stops to read if _startFromNum lines found
         //
         //       Will not works, if line length is greater than PAGE_SIZE
-        private bool ProcessStreamInPages(Stream stream, LogicalLinesHistory logicalLines)
+        private bool ProcessStreamInPages(Stream stream, LogicalLinesHistoryQueue logicalLines)
         {
             if (!CanProcessInPages())
             {
@@ -346,14 +351,14 @@ namespace TailP
             }
 
             var encoding = DetectEncoding(stream);
-            var historyDeep = _startFromNum * (Configuration.ContextLines + 1);
-            var foundLines = new LogicalLinesHistory(historyDeep);
+            var historyDeep = _startFromNum * (Configs.ContextLines + 1);
+            var foundLines = new LogicalLinesHistoryQueue(historyDeep);
             var from = FileSize;
 
             while (from != 0 && foundLines.Count != historyDeep)
             {
                 var buf = new byte[Constants.REVERS_SEARCH_PAGE_SIZE];
-                var pageLines = new LogicalLinesHistory(historyDeep);
+                var pageLines = new LogicalLinesHistoryQueue(historyDeep);
 
                 from = Math.Max(0, from - Constants.REVERS_SEARCH_PAGE_SIZE);
                 stream.Seek(from, SeekOrigin.Begin);
@@ -392,7 +397,9 @@ namespace TailP
                 }
                 finally
                 {
+#pragma warning disable CA1508 // Avoid dead conditional code
                     ms?.Dispose();
+#pragma warning restore CA1508 // Avoid dead conditional code
                 }
                 FlushLogicalLine(pageLines);
                 pageLines.Enqueue(foundLines);
@@ -541,22 +548,23 @@ namespace TailP
             }
         }
 
-        private void ProcessReadLine(string readLine, LogicalLinesHistory logicalLinesHistory)
+        private void ProcessReadLine(string readLine, LogicalLinesHistoryQueue logicalLinesHistoryQueue)
         {
             var isLogicalContinuation =
-                readLine.Length < Configuration.LogicalLineMarker.Length
-                || readLine.Substring(0, Configuration.LogicalLineMarker.Length).IndexOf(
-                    Configuration.LogicalLineMarker, Configuration.ComparisonOptions) == -1;
+                readLine.Length < Configs.LogicalLineMarker.Length
+                || readLine
+                    .Substring(0, Configs.LogicalLineMarker.Length)
+                    .Contains(Configs.LogicalLineMarker, Configs.ComparisonOptions);
 
             if (!isLogicalContinuation) // a new line begins, flush memory
             {
                 ++_lineNumber;
-                FlushLogicalLine(logicalLinesHistory);
+                FlushLogicalLine(logicalLinesHistoryQueue);
             }
 
-            var line = new Line(readLine, Configuration.ComparisonOptions, Configuration.Regex,
+            var line = new Line(readLine, Configs.ComparisonOptions, Configs.Regex,
                 isLogicalContinuation, _lineNumber);
-            line.CheckFilters(Configuration.FiltersShow, Configuration.FiltersHide, Configuration.FiltersHighlight);
+            line.CheckFilters(Configs.FiltersShow, Configs.FiltersHide, Configs.FiltersHighlight);
             AddLineNumberIfApplicable(line);
             TruncateIfApplicable(line);
             _logicalLine.Add(line);
@@ -564,51 +572,51 @@ namespace TailP
 
         private long GetLastLocation()
         {
-            switch (Configuration.StartLocationType)
+            switch (Configs.StartLocationType)
             {
                 case StartLocationTypes.B:
-                    return Configuration.StartLocation;
+                    return Configs.StartLocation;
 
                 case StartLocationTypes.P:
-                    return Configuration.StartLocation * FileSize / 100;
+                    return Configs.StartLocation * FileSize / 100;
 
                 default:
-                    throw new InvalidOperationException($"Invalid _startLocationType {Configuration.StartLocationType}");
+                    throw new InvalidOperationException($"Invalid _startLocationType {Configs.StartLocationType}");
             }
         }
 
         private bool ShouldBeHided()
         {
 #pragma warning disable RCS1080 // Use 'Count/Length' property instead of 'Any' method.
-            if (!Configuration.FiltersHide.Any())
+            if (!Configs.FiltersHide.Any())
 #pragma warning restore RCS1080 // Use 'Count/Length' property instead of 'Any' method.
             {
                 return false;
             }
 
-            return Configuration.AllFilters ?
-                        _logicalLine.FoundHideFiltersCount == Configuration.FiltersHide.Count :
+            return Configs.AllFilters ?
+                        _logicalLine.FoundHideFiltersCount == Configs.FiltersHide.Count :
                         _logicalLine.IsHidedFlagExists;
         }
 
         private bool ShouldBeShown()
         {
 #pragma warning disable RCS1080 // Use 'Count/Length' property instead of 'Any' method.
-            if (!Configuration.FiltersShow.Any())
+            if (!Configs.FiltersShow.Any())
 #pragma warning restore RCS1080 // Use 'Count/Length' property instead of 'Any' method.
             {
                 return true;
             }
 
-            return Configuration.AllFilters ?
-                        _logicalLine.FoundShowFiltersCount == Configuration.FiltersShow.Count :
+            return Configs.AllFilters ?
+                        _logicalLine.FoundShowFiltersCount == Configs.FiltersShow.Count :
                         _logicalLine.IsShowedFlagExists;
         }
 
         private bool SkipFromNumLines()
         {
             var mustSkip =
-                Configuration.LinesStartFrom == NumLinesStart.Begin
+                Configs.LinesStartFrom == NumLinesStart.Begin
                 && _startFromNum > 0
                 && _logicalLine.IsVisible;
 
@@ -620,7 +628,7 @@ namespace TailP
             return mustSkip;
         }
 
-        private void FlushLogicalLine(LogicalLinesHistory logicalLinesHistory = null)
+        private void FlushLogicalLine(LogicalLinesHistoryQueue logicalLinesHistoryQueue = null)
         {
             if (_logicalLine.IsEmpty)
             {
@@ -633,25 +641,25 @@ namespace TailP
                 (_logicalLine.IsVisible || _afterCounter > 0)
                 && !SkipFromNumLines())
             {
-                var forPrinting = new LogicalLinesHistory();
+                var forPrinting = new LogicalLinesHistoryQueue();
                 PrepareLogicalLineForPrinting(_logicalLine, forPrinting);
 
-                if (logicalLinesHistory == null)
+                if (logicalLinesHistoryQueue == null)
                 {
                     PrintLogicalLines(forPrinting);
                 }
                 else
                 {
-                    logicalLinesHistory.Enqueue(forPrinting);
+                    logicalLinesHistoryQueue.Enqueue(forPrinting);
                 }
 
                 if (_logicalLine.IsVisible)
                 {
-                    _afterCounter = Configuration.ContextAfter;
+                    _afterCounter = Configs.ContextAfter;
                 }
             }
 
-            _logicalLinesHistory.Enqueue(_logicalLine);
+            _logicalLinesHistoryQueue.Enqueue(_logicalLine);
             _logicalLine = new LogicalLine();
         }
 
@@ -663,7 +671,7 @@ namespace TailP
 
         private int _lastPrintedLine;
 
-        private void PrintLogicalLines(LogicalLinesHistory logicalLines)
+        private void PrintLogicalLines(LogicalLinesHistoryQueue logicalLines)
         {
             lock (_bl.PrintLock)
             {
@@ -675,7 +683,7 @@ namespace TailP
 
                     if (!logicalLine.IsPrinted)
                     {
-                        if (Configuration.IsContextUsed
+                        if (Configs.IsContextUsed
                             && Math.Abs(logicalLine.LineNumber - _lastPrintedLine) > 1)
                         {
                             _bl.PrintLogicalLine(TailPbl.GetContextDelimiter(), _fileIndex);
@@ -688,14 +696,14 @@ namespace TailP
             }
         }
 
-        private void PrepareLogicalLineForPrinting(LogicalLine logicalLine, LogicalLinesHistory prepared)
+        private void PrepareLogicalLineForPrinting(LogicalLine logicalLine, LogicalLinesHistoryQueue prepared)
         {
-            if (Configuration.IsContextBeforeUsed
-                && _logicalLinesHistory.Any()
+            if (Configs.IsContextBeforeUsed
+                && _logicalLinesHistoryQueue.Any()
                 && _logicalLine.IsVisible)
             {
-                prepared.Enqueue(_logicalLinesHistory);
-                _logicalLinesHistory.Clear();
+                prepared.Enqueue(_logicalLinesHistoryQueue);
+                _logicalLinesHistoryQueue.Clear();
             }
 
             prepared.Enqueue(logicalLine);
@@ -706,17 +714,17 @@ namespace TailP
             }
         }
 
-        private void TruncateIfApplicable(Line line)
+        private static void TruncateIfApplicable(Line line)
         {
-            if (Configuration.Truncate)
+            if (Configs.Truncate)
             {
                 line.Truncate(Constants.MAX_WIDTH - 1 /* -1 for newline */);
             }
         }
 
-        private void AddLineNumberIfApplicable(Line line)
+        private static void AddLineNumberIfApplicable(Line line)
         {
-            if (Configuration.ShowLineNumber)
+            if (Configs.ShowLineNumber)
             {
                 line.AddLineNumber();
             }
@@ -728,18 +736,18 @@ namespace TailP
 
             if (obj is File f)
             {
-                return _file.Equals(f._file, StringComparison.InvariantCultureIgnoreCase);
+                return _file.Equals(f._file, StringComparison.OrdinalIgnoreCase);
             }
 
             if (obj is string s)
             {
-                return _file.Equals(s, StringComparison.InvariantCultureIgnoreCase);
+                return _file.Equals(s, StringComparison.OrdinalIgnoreCase);
             }
 
             return false;
         }
 
-        public override int GetHashCode() => _file.GetHashCode();
+        public override int GetHashCode() => _file.GetHashCode(StringComparison.OrdinalIgnoreCase);
 
         public override string ToString() => FileName;
 

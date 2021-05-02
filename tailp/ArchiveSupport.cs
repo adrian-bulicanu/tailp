@@ -1,12 +1,13 @@
 ﻿// This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
-using SharpCompress.Archives;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using SharpCompress.Archives;
 
-namespace TailP
+namespace tailp
 {
     public static class ArchiveSupport
     {
@@ -19,6 +20,8 @@ namespace TailP
 
         public static bool TryGetArchivePath(string path, out string archive, out string file)
         {
+            if (path is null) throw new ArgumentNullException(nameof(path));
+
             foreach (var extension in SupportedExtensions)
             {
                 var split = path.Split(new[] { extension }, 2, StringSplitOptions.None);
@@ -63,39 +66,6 @@ namespace TailP
             }
         }
 
-        public class EntryInfo
-        {
-            private string Path { get; }
-            public long Size { get; }
-            public DateTime CreatedTime { get; }
-
-            public EntryInfo(IArchiveEntry entry)
-            {
-                Path = entry.Key;
-                Size = entry.Size;
-                CreatedTime = entry.CreatedTime.GetValueOrDefault();
-            }
-
-            public override int GetHashCode() => Path.GetHashCode();
-
-            public override bool Equals(object obj)
-            {
-                if (obj == null) return false;
-
-                if (obj is EntryInfo e)
-                {
-                    return Path.Equals(e.Path, StringComparison.InvariantCultureIgnoreCase);
-                }
-
-                if (obj is string s)
-                {
-                    return Path.Equals(s, StringComparison.InvariantCultureIgnoreCase);
-                }
-
-                return false;
-            }
-        }
-
         public static IEnumerable<string> EnumerateFiles(string path)
         {
             if (!TryGetArchivePath(path, out var archive, out var file))
@@ -118,7 +88,7 @@ namespace TailP
         /// </summary>
         /// <param name="path"></param>
         /// <returns></returns>
-        public static EntryInfo GetArchivedFileInfo(string path)
+        public static ArchiveSupportEntryInfo GetArchivedFileInfo(string path)
         {
             if (!TryGetArchivePath(path, out var archive, out var file))
             {
@@ -129,7 +99,7 @@ namespace TailP
             {
                 if (GetArchiveEntries(archive).TryGetValue(file, out var entry))
                 {
-                    return new EntryInfo(entry);
+                    return new ArchiveSupportEntryInfo(entry);
                 }
                 else
                 {

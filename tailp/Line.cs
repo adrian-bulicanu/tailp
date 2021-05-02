@@ -1,12 +1,14 @@
 ﻿// This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
+
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace TailP
+namespace tailp
 {
     public class Line : List<Token>
     {
@@ -14,8 +16,8 @@ namespace TailP
         public HashSet<int> FoundHideFilters { get; } = new HashSet<int>();
         public int LineNumber { get; }
 
-        private readonly StringComparison _comparison = Configuration.ComparisonOptions;
-        private readonly bool _useRegex = Configuration.Regex;
+        private readonly StringComparison _comparison = Configs.ComparisonOptions;
+        private readonly bool _useRegex = Configs.Regex;
         private readonly bool _isLogicalContinuation;
 
         public Line()
@@ -37,7 +39,9 @@ namespace TailP
         public Line(string s, StringComparison comparison, bool useRegex,
             bool isLogicalContinuation, int lineNumber)
         {
-            Add(new Token(Types.None, s.Replace("\t", Constants.TAB_REPLACER)));
+            if (s is null) throw new ArgumentNullException(nameof(s));
+
+            Add(new Token(Types.None, s.Replace("\t", Constants.TAB_REPLACER, StringComparison.Ordinal)));
             _comparison = comparison;
             _useRegex = useRegex;
             _isLogicalContinuation = isLogicalContinuation;
@@ -171,6 +175,10 @@ namespace TailP
         public void CheckFilters(IEnumerable<string> showFilters,
             IEnumerable<string> hideFilters, IEnumerable<string> highlightFilters)
         {
+            if (hideFilters is null) throw new ArgumentNullException(nameof(hideFilters));
+            if (showFilters is null) throw new ArgumentNullException(nameof(showFilters));
+            if (highlightFilters is null) throw new ArgumentNullException(nameof(highlightFilters));
+
             var index = 0;
             foreach (var filter in hideFilters)
             {
@@ -284,7 +292,7 @@ namespace TailP
         {
             Insert(0, new Token(Types.LineNumber,
                 _isLogicalContinuation ? Constants.LINE_NUMBER_PADDING :
-                    string.Format(Constants.LINE_NUMBER_FORMAT, LineNumber)));
+                    string.Format(CultureInfo.InvariantCulture, Constants.LINE_NUMBER_FORMAT, LineNumber)));
         }
 
         public void Truncate(int resultStringLength)
