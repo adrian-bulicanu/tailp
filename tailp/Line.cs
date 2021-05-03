@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace tailp
 {
@@ -16,8 +15,6 @@ namespace tailp
         public HashSet<int> FoundHideFilters { get; } = new HashSet<int>();
         public int LineNumber { get; }
 
-        private readonly StringComparison _comparison = Configs.ComparisonOptions;
-        private readonly bool _useRegex = Configs.Regex;
         private readonly bool _isLogicalContinuation;
 
         public Line()
@@ -26,8 +23,6 @@ namespace tailp
 
         private Line(Line other, bool copyTokens = true)
         {
-            _comparison = other._comparison;
-            _useRegex = other._useRegex;
             _isLogicalContinuation = other._isLogicalContinuation;
             LineNumber = other.LineNumber;
             if (copyTokens)
@@ -36,14 +31,11 @@ namespace tailp
             }
         }
 
-        public Line(string s, StringComparison comparison, bool useRegex,
-            bool isLogicalContinuation, int lineNumber)
+        public Line(string s, bool isLogicalContinuation, int lineNumber)
         {
             if (s is null) throw new ArgumentNullException(nameof(s));
 
             Add(new Token(Types.None, s.Replace("\t", Constants.TAB_REPLACER, StringComparison.Ordinal)));
-            _comparison = comparison;
-            _useRegex = useRegex;
             _isLogicalContinuation = isLogicalContinuation;
             LineNumber = lineNumber;
         }
@@ -100,32 +92,6 @@ namespace tailp
         }
 
         /// <summary>
-        /// Perform a string comparison or a regex match and returns first found token index and length
-        /// </summary>
-        /// <param name="text"></param>
-        /// <param name="filterText"></param>
-        /// <returns>index and length of found token in text. (-1, 0) if token is not found</returns>
-        private Tuple<int, int> GetMatchTextIndex(string text, string filterText)
-        {
-            if (_useRegex)
-            {
-                var regex = RegexObjects.GetRegexObject(filterText,
-                    () => new Regex(filterText, RegexOptions.Compiled));
-                var matches = regex.Matches(text);
-
-                return matches.Count > 0 ?
-                    new Tuple<int, int>(matches[0].Index, matches[0].Length) :
-                    new Tuple<int, int>(-1, 0);
-            }
-            else
-            {
-                return new Tuple<int, int>(
-                    text.IndexOf(filterText, 0, _comparison),
-                    filterText.Length);
-            }
-        }
-
-        /// <summary>
         /// Check filters in Types.None items and modify list if filtered item found
         /// </summary>
         private void CheckFilter(string filterText, int filterIndex, Types type, int colorIndex, ISet<int> foundFilters)
@@ -143,7 +109,7 @@ namespace tailp
                 }
 
                 var s = item.Text;
-                var match = GetMatchTextIndex(s, filterText);
+                var match = Matcher.GetMatchTextIndex(s, filterText);
                 // while token is found in the string
                 while (match.Item1 != -1)
                 {
@@ -162,7 +128,7 @@ namespace tailp
                     // keep searching in remained text
                     s = s.Substring(match.Item1 + match.Item2,
                             s.Length - match.Item1 - match.Item2);
-                    match = GetMatchTextIndex(s, filterText);
+                    match = Matcher.GetMatchTextIndex(s, filterText);
                 }
                 // do not forget to save not found tail
                 if (!string.IsNullOrEmpty(s))

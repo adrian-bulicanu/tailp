@@ -16,7 +16,6 @@ namespace tailp
     {
         // used hardcoded colors instead of default, because on Ctrl-C color changes to last used
         private const ConsoleColor DEFAULT_BACKGROUND = ConsoleColor.Black;
-
         private const ConsoleColor DEFAULT_FOREGROUND = ConsoleColor.Gray;
 
         private const int STATUS_TIMER_PERIOD_MS = 1000;
@@ -126,20 +125,28 @@ namespace tailp
                 SecondsPerPercent.Dequeue();
             }
 
-            var estimated = SecondsPerPercent.Count == SAMPLES_COUNT
-                ? TimeSpan.FromSeconds(
-                    Math.Round(SecondsPerPercent.Average() * (100 - percents))
+            try
+            {
+                var estimated = SecondsPerPercent.Count == SAMPLES_COUNT
+                    ? TimeSpan.FromSeconds(
+                        Math.Round(SecondsPerPercent.Average() * (100 - percents))
                     )
-                : TimeSpan.FromSeconds(0);
+                    : TimeSpan.FromSeconds(0);
 
-            if (estimated > TimeSpan.FromSeconds(5))
-            {
-                return $"ETA: {estimated.ToHumanReadableString()} |";
+                if (estimated > TimeSpan.FromSeconds(5))
+                {
+                    return $"ETA: {estimated.ToHumanReadableString()} |";
+                }
+
+                if (estimated > TimeSpan.FromSeconds(0))
+                {
+                    return "ETA: almost done |";
+                }
             }
-
-            if (estimated > TimeSpan.FromSeconds(0))
+            catch (OverflowException)
             {
-                return "ETA: almost done |";
+                // SecondsPerPercent is too big
+                return string.Empty;
             }
 
             return string.Empty;

@@ -551,10 +551,12 @@ namespace tailp
         private void ProcessReadLine(string readLine, LogicalLinesHistoryQueue logicalLinesHistoryQueue)
         {
             var isLogicalContinuation =
-                readLine.Length < Configs.LogicalLineMarker.Length
-                || readLine
-                    .Substring(0, Configs.LogicalLineMarker.Length)
-                    .Contains(Configs.LogicalLineMarker, Configs.ComparisonOptions);
+                !string.IsNullOrEmpty(Configs.LogicalLineMarker) &&
+                (
+                    readLine.Length < Configs.LogicalLineMarker.Length ||
+                    readLine.Substring(0, Configs.LogicalLineMarker.Length)
+                            .Contains(Configs.LogicalLineMarker, Configs.ComparisonOptions)
+                );
 
             if (!isLogicalContinuation) // a new line begins, flush memory
             {
@@ -562,8 +564,7 @@ namespace tailp
                 FlushLogicalLine(logicalLinesHistoryQueue);
             }
 
-            var line = new Line(readLine, Configs.ComparisonOptions, Configs.Regex,
-                isLogicalContinuation, _lineNumber);
+            var line = new Line(readLine, isLogicalContinuation, _lineNumber);
             line.CheckFilters(Configs.FiltersShow, Configs.FiltersHide, Configs.FiltersHighlight);
             AddLineNumberIfApplicable(line);
             TruncateIfApplicable(line);

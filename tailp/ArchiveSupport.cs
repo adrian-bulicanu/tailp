@@ -11,7 +11,7 @@ namespace tailp
 {
     public static class ArchiveSupport
     {
-        private static readonly HashSet<string> SupportedExtensions = new HashSet<string>()
+        private static readonly HashSet<string> SupportedExtensions = new HashSet<string>
         {
             ".zip", ".rar", ".7z"
         };
@@ -101,10 +101,8 @@ namespace tailp
                 {
                     return new ArchiveSupportEntryInfo(entry);
                 }
-                else
-                {
-                    throw new TailPArchiveException($"File not found {file}");
-                }
+
+                throw new TailPArchiveException($"File not found {file}");
             }
         }
 
@@ -163,10 +161,8 @@ namespace tailp
                 {
                     return entry.OpenEntryStream();
                 }
-                else
-                {
-                    throw new TailPArchiveException($"File not found {path}");
-                }
+
+                throw new TailPArchiveException($"File not found {path}");
             }
             catch (InvalidOperationException ex)
             {

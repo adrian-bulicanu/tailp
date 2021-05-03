@@ -13,7 +13,7 @@ namespace tailp
         public static string LogicalLineMarker { get; set; } = string.Empty;
         public static long StartLocation { get; set; } // default to 0
         public static StartLocationTypes StartLocationType { get; set; } = StartLocationTypes.B;
-        public static StringComparison ComparisonOptions { get; set; } = StringComparison.InvariantCultureIgnoreCase;
+        public static StringComparison ComparisonOptions { get; set; } = StringComparison.CurrentCultureIgnoreCase;
         public static bool AllFilters { get; set; } // default to false
         public static bool Regex { get; set; } // default to false
         public static bool Follow { get; set; } // default to false

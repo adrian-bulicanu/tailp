@@ -1,6 +1,7 @@
 ﻿// This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -15,11 +16,11 @@ namespace tailp
 
 #pragma warning disable S3264 // Events should be invoked
 
-        public static event System.EventHandler<FilesMonitorEventArgs> Created;
+        public static event EventHandler<FilesMonitorEventArgs> Created;
 
-        public static event System.EventHandler<FilesMonitorEventArgs> Deleted;
+        public static event EventHandler<FilesMonitorEventArgs> Deleted;
 
-        public static event System.EventHandler<FilesMonitorEventArgs> Changed;
+        public static event EventHandler<FilesMonitorEventArgs> Changed;
 
 #pragma warning restore S3264 // Events should be invoked
 
