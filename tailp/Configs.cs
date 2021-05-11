@@ -13,7 +13,12 @@ namespace tailp
         public static string LogicalLineMarker { get; set; } = string.Empty;
         public static long StartLocation { get; set; } // default to 0
         public static StartLocationTypes StartLocationType { get; set; } = StartLocationTypes.B;
-        public static StringComparison ComparisonOptions { get; set; } = StringComparison.CurrentCultureIgnoreCase;
+
+        // NOTE: temporary change the comparison options to OrdinalIgnoreCase,
+        //       because the CurrentCultureIgnoreCase are extremely slow in .NET 5
+        //       See coresponding issue: https://github.com/dotnet/runtime/issues/37951
+        public static StringComparison ComparisonOptions { get; set; } = StringComparison.OrdinalIgnoreCase; // StringComparison.CurrentCultureIgnoreCase;
+
         public static bool AllFilters { get; set; } // default to false
         public static bool Regex { get; set; } // default to false
         public static bool Follow { get; set; } // default to false
