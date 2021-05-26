@@ -1,4 +1,4 @@
-[![.NET](https://github.com/adrian-bulicanu/tailp/actions/workflows/dotnet.yml/badge.svg)](https://github.com/adrian-bulicanu/tailp/actions/workflows/dotnet.yml)
+[![.NET](https://github.com/adrian-bulicanu/tailp/actions/workflows/dotnet.yml/badge.svg)](https://github.com/adrian-bulicanu/tailp/actions/workflows/dotnet.yml) [![Build Status](https://dev.azure.com/adrianbulicanu/tailp/_apis/build/status/adrian-bulicanu.tailp?branchName=master)](https://dev.azure.com/adrianbulicanu/tailp/_build/latest?definitionId=1&branchName=master)
 
 # tailp
 
