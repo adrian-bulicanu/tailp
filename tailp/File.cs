@@ -1,20 +1,19 @@
 ﻿// This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
-
 using System;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 
-namespace tailp
+namespace TailP
 {
     public sealed class File : IDisposable
     {
         private class FileInfoCache // FileInfo accesses file on each method call
         {
             public long Length { get; set; }
-            public DateTime CreationTime { get; }
+            public DateTime CreationTime { get; private set; }
 
             /// <summary>
             /// See exceptions of FileInfo class
@@ -41,19 +40,19 @@ namespace tailp
         }
 
         private LogicalLine _logicalLine = new LogicalLine();
-        private readonly LogicalLinesHistoryQueue _logicalLinesHistoryQueue;
-        private int _lineNumber;
+        private readonly LogicalLinesHistory _logicalLinesHistory;
+        private int _lineNumber = 0;
         private bool _isFilenameNeeded = true;
-        private readonly string _file;
+        private readonly string _file = string.Empty;
         private readonly object _minorLock = new object();
-        private long _lastPos;
+        private long _lastPos = 0;
         private DateTime _lastCreationTime = DateTime.MinValue;
-        private readonly TailPbl _bl;
+        private readonly TailPBL _bl;
         private readonly int _fileIndex;
-        private FileInfoCache _fileInfo;
-        private bool _errorShown;
+        private FileInfoCache _fileInfo = null;
+        private bool _errorShown = false;
         private readonly FileTypes _fileType = FileTypes.Regular;
-        private int _startFromNum;
+        private int _startFromNum = 0;
         private int _afterCounter = -1;
 
         public FileTypes FileType
@@ -66,7 +65,6 @@ namespace tailp
                 }
             }
         }
-
         public long LastPos
         {
             get
@@ -85,44 +83,40 @@ namespace tailp
                 }
             }
         }
-
         public long FileSize
         {
             get
             {
                 lock (_minorLock)
                 {
-                    return _fileInfo?.Length ?? 0;
+                    return _fileInfo == null ? 0 : _fileInfo.Length;
                 }
             }
 
-            private set
+            set
             {
-                lock (_minorLock)
+                lock(_minorLock)
                 {
                     if (_fileInfo == null)
                     {
                         _fileInfo = new FileInfoCache(value);
-                    }
-                    else
+                    } else
                     {
                         _fileInfo.Length = value;
                     }
                 }
             }
         }
-
-        private DateTime FileCreationTime
+        public DateTime FileCreationTime
         {
             get
             {
                 lock (_minorLock)
                 {
-                    return _fileInfo?.CreationTime ?? DateTime.MinValue;
+                    return _fileInfo == null ? DateTime.MinValue : _fileInfo.CreationTime;
                 }
             }
         }
-
         public string FileName
         {
             get
@@ -133,24 +127,34 @@ namespace tailp
                 }
             }
         }
-
-        public File(string file, TailPbl bl, int fileIndex)
+        public int FileIndex
         {
-            if (string.IsNullOrEmpty(file)) throw new ArgumentException(@"Param cannot be empty", nameof(file));
+            get
+            {
+                lock (_minorLock)
+                {
+                    return _fileIndex;
+                }
+            }
+        }
+
+        public File(string file, TailPBL bl, int fileIndex)
+        {
+            if (string.IsNullOrEmpty(file)) throw new ArgumentException(nameof(file));
             _bl = bl ?? throw new ArgumentNullException(nameof(bl));
             _file = file;
             _fileIndex = fileIndex;
-            _logicalLinesHistoryQueue = new LogicalLinesHistoryQueue(Math.Max(1, Configs.ContextBefore));
-            _startFromNum = Configs.LinesStartNumber;
+            _logicalLinesHistory = new LogicalLinesHistory(Math.Max(1, Configuration.ContextBefore));
+            _startFromNum = Configuration.LinesStartNumber;
 
             if (_file == Constants.CONSOLE_FILENAME)
             {
                 _fileType = FileTypes.Console;
             }
-            else if (ArchiveSupport.TryGetArchivePath(file, out var archive, out var finalFile)
-                && ArchiveSupport.IsValidArchive(archive))
+            else if (ArchiveSupport.TryGetArchivePath(file, out string archive, out string finalFile) &&
+                ArchiveSupport.IsValidArchive(archive))
             {
-                _fileType = string.IsNullOrWhiteSpace(finalFile)
+                _fileType = finalFile == string.Empty
                             ? FileTypes.Archive
                             : FileTypes.ArchivedFile;
             }
@@ -170,23 +174,21 @@ namespace tailp
                         case FileTypes.Console:
                             _fileInfo = new FileInfoCache(LastPos);
                             break;
-
                         case FileTypes.Regular:
                             _fileInfo = new FileInfoCache(new FileInfo(_file));
                             break;
-
                         case FileTypes.ArchivedFile:
-                            _fileInfo ??= new FileInfoCache(_file);
+                            if (_fileInfo == null)
+                            {
+                                _fileInfo = new FileInfoCache(_file);
+                            }
                             break;
-
                         default:
                             throw new InvalidOperationException(
-                                $"Unknown FileType {_fileType}");
+                                string.Format("Unknown FileType {0}", _fileType));
                     }
                 }
-#pragma warning disable CA1031 // Do not catch general exception types
                 catch
-#pragma warning restore CA1031 // Do not catch general exception types
                 {
                     _fileInfo = null;
                 }
@@ -203,7 +205,7 @@ namespace tailp
             {
                 return;
             }
-            _bl.SetLastFile(this);
+            _bl.LastFile = this;
 
             stream = GetStream();
             FindLastLinesInStream(stream);
@@ -216,7 +218,7 @@ namespace tailp
             FlushLogicalLine();
             ShowError(error);
 
-            if (Configs.Follow)
+            if (Configuration.Follow)
             {
                 ResetCounters();
             }
@@ -233,33 +235,33 @@ namespace tailp
                 {
                     ProcessInternal(ref stream);
                 }
-#pragma warning disable CA1031 // Do not catch general exception types
                 catch (Exception ex)
-#pragma warning restore CA1031 // Do not catch general exception types
                 {
                     ProcessError(ex.Message);
                 }
                 finally
                 {
-                    stream?.Dispose();
+                    if (stream != null)
+                    {
+                        stream.Dispose();
+                    }
                 }
             }
         }
 
-        private bool _lastLinesProcessed;
-
+        private bool _lastLinesProcessed = false;
         private void FindLastLinesInStream(Stream stream)
         {
-            if (_lastLinesProcessed
-                || Configs.LinesStartFrom != NumLinesStart.End)
+            if (_lastLinesProcessed ||
+                Configuration.LinesStartFrom != NumLinesStart.end)
             {
                 return;
             }
 
             if (_startFromNum != 0)
             {
-                var logicalLinesHistory = new LogicalLinesHistoryQueue(
-                    _startFromNum * (Configs.ContextLines + 1));
+                var logicalLinesHistory = new LogicalLinesHistory(
+                    _startFromNum * (Configuration.ContextLines + 1));
                 if (stream.CanSeek)
                 {
                     if (!ProcessStreamInPages(stream, logicalLinesHistory))
@@ -278,7 +280,7 @@ namespace tailp
                 FlushLogicalLine(logicalLinesHistory);
                 while (logicalLinesHistory.Any())
                 {
-                    var forPrinting = new LogicalLinesHistoryQueue();
+                    var forPrinting = new LogicalLinesHistory();
                     PrepareLogicalLineForPrinting(logicalLinesHistory.Dequeue(), forPrinting);
                     PrintLogicalLines(forPrinting);
                 }
@@ -288,7 +290,7 @@ namespace tailp
             _lastLinesProcessed = true;
         }
 
-        private void ProcessStreamFromLastPosToEnd(Stream stream, LogicalLinesHistoryQueue logicalLines)
+        private void ProcessStreamFromLastPosToEnd(Stream stream, LogicalLinesHistory logicalLines)
         {
             var encoding = Encoding.Default;
 
@@ -302,48 +304,52 @@ namespace tailp
                 encoding = Console.InputEncoding;
             }
 
-            using var sr = new StreamReader(stream, encoding, true);
-            SeekToLastPos(sr);
-            var s = ReadLine(sr);
-            while (s != null)
+            using (var sr = new StreamReader(stream, encoding, true))
             {
-                ProcessReadLine(s, logicalLines);
-                s = ReadLine(sr);
-            }
+                SeekToLastPos(sr);
+                var s = ReadLine(sr);
+                while (s != null)
+                {
+                    ProcessReadLine(s, logicalLines);
+                    s = ReadLine(sr);
+                }
 
-            // for archives, LastPos remains 0, so update-it to FileSize
-            // NOTE: do not set LastPos = FileSize for files, cause FileSize is just
-            //       a cached value, and do not reflect actual file size!
-            if (!sr.BaseStream.CanSeek)
-            {
-                LastPos = FileSize;
+                // for archives, LastPos remains 0, so update-it to FileSize
+                // NOTE: do not set LastPos = FileSize for files, cause FileSize is just
+                //       a cached value, and do not reflect actual file size!
+                if (!sr.BaseStream.CanSeek)
+                {
+                    LastPos = FileSize;
+                }
             }
         }
 
-        private static Encoding DetectEncoding(Stream stream)
+        private Encoding DetectEncoding(Stream stream)
         {
-            using var sr = new StreamReader(stream, Encoding.Default, true,
-                Constants.REVERS_SEARCH_PAGE_SIZE, true);
-            sr.Peek();
-            return sr.CurrentEncoding;
+            using (var sr = new StreamReader(stream, Encoding.Default, true,
+                Constants.REVERS_SEARCH_PAGE_SIZE, true))
+            {
+                sr.Peek();
+                return sr.CurrentEncoding;
+            }
         }
 
         private bool CanProcessInPages() =>
                 // process in pages only if makes sense
-                FileSize > Constants.REVERS_SEARCH_PAGE_SIZE
+                FileSize > Constants.REVERS_SEARCH_PAGE_SIZE &&
 
                 // NOTE: it seems quite complicate to store the before context,
                 //       when file is reading in pages from end to begin.
                 //       for the moment, disable the optimization when before context
                 //       is needed
-                && (!Configs.IsContextBeforeUsed);
+                (!Configuration.IsContextBeforeUsed);
 
         // Optimization used:
         //       read from end in pages by XXX bytes to a memory stream
         //       and stops to read if _startFromNum lines found
         //
         //       Will not works, if line length is greater than PAGE_SIZE
-        private bool ProcessStreamInPages(Stream stream, LogicalLinesHistoryQueue logicalLines)
+        private bool ProcessStreamInPages(Stream stream, LogicalLinesHistory logicalLines)
         {
             if (!CanProcessInPages())
             {
@@ -351,14 +357,14 @@ namespace tailp
             }
 
             var encoding = DetectEncoding(stream);
-            var historyDeep = _startFromNum * (Configs.ContextLines + 1);
-            var foundLines = new LogicalLinesHistoryQueue(historyDeep);
+            var historyDeep = _startFromNum * (Configuration.ContextLines + 1);
+            var foundLines = new LogicalLinesHistory(historyDeep);
             var from = FileSize;
 
             while (from != 0 && foundLines.Count != historyDeep)
             {
                 var buf = new byte[Constants.REVERS_SEARCH_PAGE_SIZE];
-                var pageLines = new LogicalLinesHistoryQueue(historyDeep);
+                var pageLines = new LogicalLinesHistory(historyDeep);
 
                 from = Math.Max(0, from - Constants.REVERS_SEARCH_PAGE_SIZE);
                 stream.Seek(from, SeekOrigin.Begin);
@@ -368,38 +374,41 @@ namespace tailp
                 try
                 {
                     ms = new MemoryStream(buf, 0, sz);
-                    using var sr = new StreamReader(ms, encoding,
-                        from == 0 // ignore BOM only at file beginning
-                    );
-                    ms = null; // prevent disposing several times
-
-                    if (from != 0)
+                    using (var sr = new StreamReader(ms, encoding,
+                            from == 0 // ignore BOM only at file beginning
+                            ))
                     {
-                        var nul = sr.ReadLine(); // ignore first line, may be incomplete
-                        var szBytes = encoding.GetByteCount(nul ?? string.Empty);
-                        if (szBytes >= Constants.REVERS_SEARCH_PAGE_SIZE) // extra long line
-                        {
-                            return false;
-                        }
-                        from += szBytes;
-                    }
+                        ms = null; // prevent disposing several times
 
-                    var s = sr.ReadLine();
-                    while (s != null)
-                    {
-                        if (encoding.GetByteCount(s) >= Constants.REVERS_SEARCH_PAGE_SIZE)
+                        if (from != 0)
                         {
-                            return false;
+                            var nul = sr.ReadLine(); // ignore first line, may be incomplete
+                            var szBytes = encoding.GetByteCount(nul);
+                            if (szBytes >= Constants.REVERS_SEARCH_PAGE_SIZE) // extra long line
+                            {
+                                return false;
+                            }
+                            from += szBytes;
                         }
-                        ProcessReadLine(s, pageLines);
-                        s = sr.ReadLine();
+
+                        var s = sr.ReadLine();
+                        while (s != null)
+                        {
+                            if (encoding.GetByteCount(s) >= Constants.REVERS_SEARCH_PAGE_SIZE)
+                            {
+                                return false;
+                            }
+                            ProcessReadLine(s, pageLines);
+                            s = sr.ReadLine();
+                        }
                     }
                 }
                 finally
                 {
-#pragma warning disable CA1508 // Avoid dead conditional code
-                    ms?.Dispose();
-#pragma warning restore CA1508 // Avoid dead conditional code
+                    if (ms != null)
+                    {
+                        ms.Dispose();
+                    }
                 }
                 FlushLogicalLine(pageLines);
                 pageLines.Enqueue(foundLines);
@@ -416,11 +425,10 @@ namespace tailp
             return true;
         }
 
-        private Timer _noProcessTimer;
-
+        private Timer _noProcessTimer = null;
         private void CreateNoProcessTimer()
         {
-            _noProcessTimer = new Timer((_) =>
+            _noProcessTimer = new Timer((s) =>
             {
                 lock (_processLock)
                 {
@@ -456,24 +464,22 @@ namespace tailp
 
         private Stream GetStream()
         {
-            Stream stream;
+            Stream stream = null;
+
             switch (_fileType)
             {
                 case FileTypes.Console:
                     stream = Console.OpenStandardInput();
                     break;
-
                 case FileTypes.Regular:
                     stream = new FileStream(_file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                     break;
-
                 case FileTypes.ArchivedFile:
                     stream = ArchiveSupport.GetFileStream(_file);
                     break;
-
                 default:
                     throw new InvalidOperationException(
-                        $"Invalid _fileType {_fileType}");
+                        string.Format("Invalid _fileType {0}", _fileType));
             }
 
             return stream;
@@ -481,7 +487,7 @@ namespace tailp
 
         private bool IsFileUnchanged()
         {
-            var res = FileSize > 0 && LastPos == FileSize;
+            bool res = FileSize > 0 && LastPos == FileSize;
             if (res)
             {
                 FlushLogicalLine();
@@ -504,8 +510,7 @@ namespace tailp
             if (sr.BaseStream.CanSeek)
             {
                 LastPos = sr.BaseStream.Position;
-            }
-            else
+            } else
             {
                 LastPos += bytesCount;
                 FileSize = LastPos;
@@ -529,7 +534,6 @@ namespace tailp
         }
 
         private readonly object _errorShownLock = new object();
-
         private void ShowError(string error)
         {
             bool showError;
@@ -543,29 +547,27 @@ namespace tailp
             }
             if (showError)
             {
-                error += $". [{FileName}]";
-                _bl.NewLineCallback(TailPbl.GetErrorLine(error), 0);
+                error += string.Format(". [{0}]", FileName);
+                _bl.NewLineCallback(TailPBL.GetErrorLine(error), 0);
             }
         }
 
-        private void ProcessReadLine(string readLine, LogicalLinesHistoryQueue logicalLinesHistoryQueue)
+        private void ProcessReadLine(string readLine, LogicalLinesHistory logicalLinesHistory)
         {
             var isLogicalContinuation =
-                !string.IsNullOrEmpty(Configs.LogicalLineMarker) &&
-                (
-                    readLine.Length < Configs.LogicalLineMarker.Length ||
-                    readLine.Substring(0, Configs.LogicalLineMarker.Length)
-                            .Contains(Configs.LogicalLineMarker, Configs.ComparisonOptions)
-                );
+                readLine.Length < Configuration.LogicalLineMarker.Length ||
+                readLine.Substring(0, Configuration.LogicalLineMarker.Length).IndexOf(
+                    Configuration.LogicalLineMarker, Configuration.ComparisonOptions) == -1;
 
             if (!isLogicalContinuation) // a new line begins, flush memory
             {
                 ++_lineNumber;
-                FlushLogicalLine(logicalLinesHistoryQueue);
+                FlushLogicalLine(logicalLinesHistory);
             }
 
-            var line = new Line(readLine, isLogicalContinuation, _lineNumber);
-            line.CheckFilters(Configs.FiltersShow, Configs.FiltersHide, Configs.FiltersHighlight);
+            var line = new Line(readLine, Configuration.ComparisonOptions, Configuration.Regex,
+                isLogicalContinuation, _lineNumber);
+            line.CheckFilters(Configuration.FiltersShow, Configuration.FiltersHide, Configuration.FiltersHighlight);
             AddLineNumberIfApplicable(line);
             TruncateIfApplicable(line);
             _logicalLine.Add(line);
@@ -573,53 +575,48 @@ namespace tailp
 
         private long GetLastLocation()
         {
-            switch (Configs.StartLocationType)
+            switch (Configuration.StartLocationType)
             {
-                case StartLocationTypes.B:
-                    return Configs.StartLocation;
-
-                case StartLocationTypes.P:
-                    return Configs.StartLocation * FileSize / 100;
-
+                case StartLocationTypes.b:
+                    return Configuration.StartLocation;
+                case StartLocationTypes.p:
+                    return Configuration.StartLocation * FileSize / 100;
                 default:
-                    throw new InvalidOperationException($"Invalid _startLocationType {Configs.StartLocationType}");
+                    throw new InvalidOperationException(string.Format(
+                        "Invalid _startLocationType {0}", Configuration.StartLocationType));
             }
         }
 
         private bool ShouldBeHided()
         {
-#pragma warning disable RCS1080 // Use 'Count/Length' property instead of 'Any' method.
-            if (!Configs.FiltersHide.Any())
-#pragma warning restore RCS1080 // Use 'Count/Length' property instead of 'Any' method.
+            if (!Configuration.FiltersHide.Any())
             {
                 return false;
             }
 
-            return Configs.AllFilters ?
-                        _logicalLine.FoundHideFiltersCount == Configs.FiltersHide.Count :
+            return Configuration.AllFilters ?
+                        _logicalLine.FoundHideFiltersCount == Configuration.FiltersHide.Count :
                         _logicalLine.IsHidedFlagExists;
         }
 
         private bool ShouldBeShown()
         {
-#pragma warning disable RCS1080 // Use 'Count/Length' property instead of 'Any' method.
-            if (!Configs.FiltersShow.Any())
-#pragma warning restore RCS1080 // Use 'Count/Length' property instead of 'Any' method.
+            if (!Configuration.FiltersShow.Any())
             {
                 return true;
             }
 
-            return Configs.AllFilters ?
-                        _logicalLine.FoundShowFiltersCount == Configs.FiltersShow.Count :
+            return Configuration.AllFilters ?
+                        _logicalLine.FoundShowFiltersCount == Configuration.FiltersShow.Count :
                         _logicalLine.IsShowedFlagExists;
         }
 
         private bool SkipFromNumLines()
         {
             var mustSkip =
-                Configs.LinesStartFrom == NumLinesStart.Begin
-                && _startFromNum > 0
-                && _logicalLine.IsVisible;
+                Configuration.LinesStartFrom == NumLinesStart.begin &&
+                _startFromNum > 0 &&
+                _logicalLine.IsVisible;
 
             if (mustSkip)
             {
@@ -629,7 +626,7 @@ namespace tailp
             return mustSkip;
         }
 
-        private void FlushLogicalLine(LogicalLinesHistoryQueue logicalLinesHistoryQueue = null)
+        private void FlushLogicalLine(LogicalLinesHistory logicalLinesHistory = null)
         {
             if (_logicalLine.IsEmpty)
             {
@@ -639,28 +636,28 @@ namespace tailp
             _logicalLine.IsVisible = !ShouldBeHided() && ShouldBeShown();
 
             if (
-                (_logicalLine.IsVisible || _afterCounter > 0)
-                && !SkipFromNumLines())
+                (_logicalLine.IsVisible || _afterCounter > 0) &&
+                !SkipFromNumLines())
             {
-                var forPrinting = new LogicalLinesHistoryQueue();
+                var forPrinting = new LogicalLinesHistory();
                 PrepareLogicalLineForPrinting(_logicalLine, forPrinting);
 
-                if (logicalLinesHistoryQueue == null)
+                if (logicalLinesHistory == null)
                 {
                     PrintLogicalLines(forPrinting);
                 }
                 else
                 {
-                    logicalLinesHistoryQueue.Enqueue(forPrinting);
+                    logicalLinesHistory.Enqueue(forPrinting);
                 }
 
                 if (_logicalLine.IsVisible)
                 {
-                    _afterCounter = Configs.ContextAfter;
+                    _afterCounter = Configuration.ContextAfter;
                 }
             }
 
-            _logicalLinesHistoryQueue.Enqueue(_logicalLine);
+            _logicalLinesHistory.Enqueue(_logicalLine);
             _logicalLine = new LogicalLine();
         }
 
@@ -670,9 +667,8 @@ namespace tailp
             _isFilenameNeeded = false;
         }
 
-        private int _lastPrintedLine;
-
-        private void PrintLogicalLines(LogicalLinesHistoryQueue logicalLines)
+        private int _lastPrintedLine = 0;
+        private void PrintLogicalLines(LogicalLinesHistory logicalLines)
         {
             lock (_bl.PrintLock)
             {
@@ -684,10 +680,10 @@ namespace tailp
 
                     if (!logicalLine.IsPrinted)
                     {
-                        if (Configs.IsContextUsed
-                            && Math.Abs(logicalLine.LineNumber - _lastPrintedLine) > 1)
+                        if (Configuration.IsContextUsed &&
+                            Math.Abs(logicalLine.LineNumber - _lastPrintedLine) > 1)
                         {
-                            _bl.PrintLogicalLine(TailPbl.GetContextDelimiter(), _fileIndex);
+                            _bl.PrintLogicalLine(TailPBL.GetContextDelimiter(), _fileIndex);
                         }
 
                         _bl.PrintLogicalLine(logicalLine, _fileIndex);
@@ -697,14 +693,14 @@ namespace tailp
             }
         }
 
-        private void PrepareLogicalLineForPrinting(LogicalLine logicalLine, LogicalLinesHistoryQueue prepared)
+        private void PrepareLogicalLineForPrinting(LogicalLine logicalLine, LogicalLinesHistory prepared)
         {
-            if (Configs.IsContextBeforeUsed
-                && _logicalLinesHistoryQueue.Any()
-                && _logicalLine.IsVisible)
+            if (Configuration.IsContextBeforeUsed &&
+                _logicalLinesHistory.Any() &&
+                _logicalLine.IsVisible)
             {
-                prepared.Enqueue(_logicalLinesHistoryQueue);
-                _logicalLinesHistoryQueue.Clear();
+                prepared.Enqueue(_logicalLinesHistory);
+                _logicalLinesHistory.Clear();
             }
 
             prepared.Enqueue(logicalLine);
@@ -715,17 +711,17 @@ namespace tailp
             }
         }
 
-        private static void TruncateIfApplicable(Line line)
+        private void TruncateIfApplicable(Line line)
         {
-            if (Configs.Truncate)
+            if (Configuration.Truncate)
             {
                 line.Truncate(Constants.MAX_WIDTH - 1 /* -1 for newline */);
             }
         }
 
-        private static void AddLineNumberIfApplicable(Line line)
+        private void AddLineNumberIfApplicable(Line line)
         {
-            if (Configs.ShowLineNumber)
+            if (Configuration.ShowLineNumber)
             {
                 line.AddLineNumber();
             }
@@ -737,20 +733,20 @@ namespace tailp
 
             if (obj is File f)
             {
-                return _file.Equals(f._file, StringComparison.OrdinalIgnoreCase);
+                return _file.Equals(f._file, StringComparison.InvariantCultureIgnoreCase);
             }
 
             if (obj is string s)
             {
-                return _file.Equals(s, StringComparison.OrdinalIgnoreCase);
+                return _file.Equals(s, StringComparison.InvariantCultureIgnoreCase);
             }
 
             return false;
         }
 
-        public override int GetHashCode() => _file.GetHashCode(StringComparison.OrdinalIgnoreCase);
+        public override int GetHashCode() => _file.GetHashCode();
 
-        public override string ToString() => FileName;
+        public override string ToString() => FileName.ToString();
 
         public void Dispose() => DisposeNoProcessTimer();
     }

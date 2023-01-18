@@ -1,6 +1,6 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using tailp;
+using TailP;
 
 namespace tailpTests
 {
@@ -22,17 +22,12 @@ namespace tailpTests
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentOutOfRangeException))]
-        public void LineTest00SubstringMin()
+        public void LineTest00Substring()
         {
-            _fixture.Substring(int.MinValue);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentOutOfRangeException))]
-        public void LineTest00SubstringMax()
-        {
-            _fixture.Substring(int.MaxValue);
+            Assert.ThrowsException<ArgumentOutOfRangeException>(
+                () => _fixture.Substring(int.MinValue));
+            Assert.ThrowsException<ArgumentOutOfRangeException>(
+                () => _fixture.Substring(int.MaxValue));
         }
 
         [TestMethod]

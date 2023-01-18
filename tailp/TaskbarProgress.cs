@@ -1,26 +1,20 @@
 ﻿// This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
-
 using System;
 using System.Runtime.InteropServices;
 
-// ReSharper disable SuspiciousTypeConversion.Global
-
-namespace tailp
+namespace TailP
 {
     // thanks to https://stackoverflow.com/a/24187171
     [Flags]
     public enum TaskbarStates
     {
 #pragma warning disable S2346 // Flags enumerations zero-value members should be named "None"
-#pragma warning disable CA1008 // Enums should have zero value
         NoProgress = 0,
-#pragma warning restore CA1008 // Enums should have zero value
 #pragma warning restore S2346 // Flags enumerations zero-value members should be named "None"
         Indeterminate = 0x1,
         Normal = 0x2,
         Error = 0x4,
-        // ReSharper disable once UnusedMember.Global
         Paused = 0x8
     }
 
@@ -34,16 +28,12 @@ namespace tailp
             // ITaskbarList
             [PreserveSig]
             void HrInit();
-
             [PreserveSig]
             void AddTab(IntPtr hwnd);
-
             [PreserveSig]
             void DeleteTab(IntPtr hwnd);
-
             [PreserveSig]
             void ActivateTab(IntPtr hwnd);
-
             [PreserveSig]
             void SetActiveAlt(IntPtr hwnd);
 
@@ -54,7 +44,6 @@ namespace tailp
             // ITaskbarList3
             [PreserveSig]
             void SetProgressValue(IntPtr hwnd, UInt64 ullCompleted, UInt64 ullTotal);
-
             [PreserveSig]
             void SetProgressState(IntPtr hwnd, TaskbarStates state);
         }
@@ -67,37 +56,43 @@ namespace tailp
         }
 
         [DllImport("kernel32.dll")]
-#pragma warning disable CA5392 // Use DefaultDllImportSearchPaths attribute for P/Invokes
         internal static extern IntPtr GetConsoleWindow();
-#pragma warning restore CA5392 // Use DefaultDllImportSearchPaths attribute for P/Invokes
     }
 
     public static class TaskbarProgress
     {
-        private static readonly NativeMethods.ITaskbarList3 TaskbarInstance =
+        private static NativeMethods.ITaskbarList3 taskbarInstance =
             (NativeMethods.ITaskbarList3)new NativeMethods.TaskbarInstance();
-
-        private static readonly bool TaskbarSupported = Environment.OSVersion.Version >= new Version(6, 1);
-        private static IntPtr _consoleHandle = IntPtr.Zero;
+        private static bool taskbarSupported = Environment.OSVersion.Version >= new Version(6, 1);
+        private static IntPtr consoleHandle = IntPtr.Zero;
 
         private static IntPtr GetConsoleHandle()
         {
-            if (_consoleHandle == IntPtr.Zero)
+            if (consoleHandle == IntPtr.Zero)
             {
-                _consoleHandle = NativeMethods.GetConsoleWindow();
+                consoleHandle = NativeMethods.GetConsoleWindow();
             }
 
-            return _consoleHandle;
+            return consoleHandle;
+        }
+        public static void SetState(IntPtr windowHandle, TaskbarStates taskbarState)
+        {
+            if (taskbarSupported) taskbarInstance.SetProgressState(windowHandle, taskbarState);
+        }
+
+        public static void SetValue(IntPtr windowHandle, double progressValue, double progressMax)
+        {
+            if (taskbarSupported) taskbarInstance.SetProgressValue(windowHandle, (ulong)progressValue, (ulong)progressMax);
         }
 
         public static void SetState(TaskbarStates taskbarState)
         {
-            if (TaskbarSupported) TaskbarInstance.SetProgressState(GetConsoleHandle(), taskbarState);
+            if (taskbarSupported) taskbarInstance.SetProgressState(GetConsoleHandle(), taskbarState);
         }
 
         public static void SetValue(double progressValue, double progressMax)
         {
-            if (TaskbarSupported) TaskbarInstance.SetProgressValue(GetConsoleHandle(), (ulong)progressValue, (ulong)progressMax);
+            if (taskbarSupported) taskbarInstance.SetProgressValue(GetConsoleHandle(), (ulong)progressValue, (ulong)progressMax);
         }
     }
 }

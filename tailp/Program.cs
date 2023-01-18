@@ -1,58 +1,61 @@
 ﻿// This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
-
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Resources;
 using System.Threading;
+using System.Linq;
 
-[assembly: CLSCompliant(true)]
-[assembly: NeutralResourcesLanguage("en-US")]
-namespace tailp
+namespace TailP
 {
-    internal static class Program
+
+    static class Program
     {
         // used hardcoded colors instead of default, because on Ctrl-C color changes to last used
-        private const ConsoleColor DEFAULT_BACKGROUND = ConsoleColor.Black;
-        private const ConsoleColor DEFAULT_FOREGROUND = ConsoleColor.Gray;
+        static private readonly ConsoleColor DEFAULT_BACKGROUND = ConsoleColor.Black;
+        static private readonly ConsoleColor DEFAULT_FOREGROUND = ConsoleColor.Gray;
 
-        private const int STATUS_TIMER_PERIOD_MS = 1000;
+        static private readonly int STATUS_TIMER_PERIOD_MS = 1000;
 
-        private static Timer _statusTimer;
-        private static long _lastPos;
-        private static string _lastFileName;
-        private static DateTime _lastChanged = DateTime.Now;
+        static private Timer _statusTimer;
+        static private long _lastPos = 0;
+        static private string _lastFileName;
+        static private DateTime _lastChanged = DateTime.Now;
 
-        private static string ProcessedBytesToString(long processed, long total)
+        static private string ProcessedBytesToString(long processed, long total)
         {
             if (total < 1024)
             {
-                return $"{processed} of {total} bytes";
+                return string.Format("{0} of {1} bytes", processed, total);
             }
             if (total < 1024 * 1024)
             {
-                return
-                    $"{Math.Round(100.0 * processed / 1024 / 100, 2)} of {Math.Round(100.0 * total / 1024 / 100, 2)} KiB";
+                return string.Format("{0} of {1} KiB",
+                    Math.Round(100.0 * processed / 1024 / 100, 2),
+                    Math.Round(100.0 * total / 1024 / 100, 2));
             }
             if (total < 1024 * 1024 * 1024)
             {
-                return
-                    $"{Math.Round(100.0 * processed / 1024 / 1024 / 100, 2)} of {Math.Round(100.0 * total / 1024 / 1024 / 100, 2)} MiB";
+                return string.Format("{0} of {1} MiB",
+                    Math.Round(100.0 * processed / 1024 / 1024 / 100, 2),
+                    Math.Round(100.0 * total / 1024 / 1024 / 100, 2));
             }
 
-            return
-                $"{Math.Round(100.0 * processed / 1024 / 1024 / 1024 / 100, 2)} of {Math.Round(100.0 * total / 1024 / 1024 / 1024 / 100, 2)} GiB";
+            return string.Format("{0} of {1} GiB",
+                Math.Round(100.0 * processed / 1024 / 1024 / 1024 / 100, 2),
+                Math.Round(100.0 * total / 1024 / 1024 / 1024 / 100, 2));
         }
 
-        private static void StartUpdatingStatus()
+        static private void StartUpdatingStatus()
         {
             _statusTimer = new Timer(
-                (_) => UpdateStatus(), null, 0, STATUS_TIMER_PERIOD_MS);
+                (s) =>
+                {
+                    UpdateStatus();
+                }, null, 0, STATUS_TIMER_PERIOD_MS);
         }
 
-        private static void UpdateProgressBar(byte percents)
+        static private void UpdateProgressBar(byte percents)
         {
             if (percents < 100)
             {
@@ -65,7 +68,7 @@ namespace tailp
             }
         }
 
-        private static void UpdateStatus()
+        static private void UpdateStatus()
         {
             var lastPos = _bl.TotalProcessed;
             var totalSize = _bl.TotalFilesSize;
@@ -84,90 +87,86 @@ namespace tailp
             {
                 var totalFiles = _bl.FilesCount;
                 var pendingFiles = _bl.Pending;
-                var files = Configs.Follow
-                    ? $"{totalFiles} files"
-                    : $"{totalFiles - pendingFiles} of {totalFiles}";
+                var files = Configuration.Follow
+                    ? string.Format("{0} files", totalFiles)
+                    : string.Format("{0} of {1}", totalFiles - pendingFiles, totalFiles);
 
-                var title =
-                    $"{ProcessedBytesToString(lastPos, totalSize)} | {GetEtaText(percents)} last processed: {Path.GetFileName(_bl.LastFileName)} {DateTime.Now.Subtract(_lastChanged).ToHumanReadableString()} ago ({files}) | ";
+                var title = string.Format(
+                    "{0} | {1} last processed: {2} {3} ago ({4}) | ",
+                    ProcessedBytesToString(lastPos, totalSize),
+                    GetETAText(percents),
+                    Path.GetFileName(_bl.LastFileName),
+                    DateTime.Now.Subtract(_lastChanged).ToHumanReadableString(),
+                    files);
 
                 Console.Title = title.AppendFromRight(
-                    Path.GetFullPath(_bl.LastFileName!), Console.WindowWidth);
+                    Path.GetFullPath(_bl.LastFileName), Console.WindowWidth);
 
                 UpdateProgressBar(percents);
             }
         }
 
-        private static DateTime _lastCalculate = DateTime.UtcNow;
-        private static byte _lastPercents = 100;
-        private static readonly Queue<double> SecondsPerPercent = new Queue<double>();
-        private const int SAMPLES_COUNT = 5;
-
-        private static string GetEtaText(byte percents)
+        static private DateTime _lastCalculate = DateTime.UtcNow;
+        static private byte _lastPercents = 100;
+        static private Queue<double> _secondsPerPercent = new Queue<double>();
+        static readonly int SAMPLES_COUNT = 5;
+        private static string GetETAText(byte percents)
         {
             if (_lastPercents != percents)
             {
                 if (_lastPercents < percents)
                 {
-                    var speed =
-                    1.0 * (DateTime.UtcNow - _lastCalculate).TotalSeconds
-                    / (percents - _lastPercents); //-V3064
+                    double speed =
+                    1.0 * (DateTime.UtcNow - _lastCalculate).TotalSeconds /
+                    (percents - _lastPercents); //-V3064
 
-                    SecondsPerPercent.Enqueue(speed);
+                    _secondsPerPercent.Enqueue(speed);
                 }
 
                 _lastPercents = percents;
                 _lastCalculate = DateTime.UtcNow;
             }
 
-            while (SecondsPerPercent.Count > SAMPLES_COUNT)
+            while (_secondsPerPercent.Count > SAMPLES_COUNT)
             {
-                SecondsPerPercent.Dequeue();
+                _secondsPerPercent.Dequeue();
             }
 
-            try
-            {
-                var estimated = SecondsPerPercent.Count == SAMPLES_COUNT
-                    ? TimeSpan.FromSeconds(
-                        Math.Round(SecondsPerPercent.Average() * (100 - percents))
+            var estimated = _secondsPerPercent.Count == SAMPLES_COUNT
+                ? TimeSpan.FromSeconds(
+                    Math.Round(_secondsPerPercent.Average() * (100 - percents))
                     )
-                    : TimeSpan.FromSeconds(0);
+                : TimeSpan.FromSeconds(0);
 
-                if (estimated > TimeSpan.FromSeconds(5))
-                {
-                    return $"ETA: {estimated.ToHumanReadableString()} |";
-                }
-
-                if (estimated > TimeSpan.FromSeconds(0))
-                {
-                    return "ETA: almost done |";
-                }
-            }
-            catch (OverflowException)
+            if (estimated > TimeSpan.FromSeconds(5))
             {
-                // SecondsPerPercent is too big
-                return string.Empty;
+                return string.Format("ETA: {0} |", estimated.ToHumanReadableString());
+            }
+
+            if (estimated > TimeSpan.FromSeconds(0))
+            {
+                return "ETA: almost done |";
             }
 
             return string.Empty;
         }
 
-        private static void ResetConsoleColors()
+        static private void ResetConsoleColors()
         {
             Console.BackgroundColor = DEFAULT_BACKGROUND;
             Console.ForegroundColor = DEFAULT_FOREGROUND;
         }
 
-        private static TailPbl _bl;
+        static private TailPBL _bl;
 
-        private static void Main(string[] args)
+        static void Main(string[] args)
         {
             // reset colors on Ctrl+C
-            Console.CancelKeyPress += (s, a) => ResetConsoleColors();
+            Console.CancelKeyPress += (s, a) => { ResetConsoleColors(); };
 
             NewLine();
 
-            _bl = new TailPbl(WriteLine);
+            _bl = new TailPBL((l, i) => WriteLine(l, i));
             try
             {
                 _bl.ParseArgs(args);
@@ -176,7 +175,7 @@ namespace tailp
 
                 _bl.StartProcess();
 
-                if (Configs.Follow)
+                if (Configuration.Follow)
                 {
                     Console.ReadLine();
                 }
@@ -186,16 +185,14 @@ namespace tailp
             }
             catch (TailPHelpException)
             {
-                WriteMessage(TailPbl.GetHelp(), Types.None);
+                WriteMessage(_bl.GetHelp(), Types.None);
             }
             catch (TailPArgsException ex)
             {
                 WriteMessage(ex.ToString(), Types.Error);
-                WriteMessage(TailPbl.GetHelp(), Types.None);
+                WriteMessage(_bl.GetHelp(), Types.None);
             }
-#pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception ex)
-#pragma warning restore CA1031 // Do not catch general exception types
             {
                 WriteMessage(ex.ToString(), Types.Error);
             }
@@ -205,7 +202,7 @@ namespace tailp
             }
         }
 
-        private static readonly ConsoleColor[] AvailableFilterColors = new[]
+        static private ConsoleColor[] _availableFilterColors = new ConsoleColor[]
         {
             ConsoleColor.Yellow,
             ConsoleColor.Green,
@@ -216,26 +213,24 @@ namespace tailp
             ConsoleColor.DarkCyan,
             ConsoleColor.DarkMagenta
         };
-
-        private static readonly Dictionary<int, ConsoleColor> FilterColors = new Dictionary<int, ConsoleColor>();
-        private static int _lastFilterColor = AvailableFilterColors.Length;
-
-        private static ConsoleColor GetFilterBackgroundColor(int colorIndex)
+        static private Dictionary<int, ConsoleColor> _filterColors = new Dictionary<int, ConsoleColor>();
+        static private int _lastFilterColor = _availableFilterColors.Length;
+        static private ConsoleColor GetFilterBackgroundColor(int colorIndex)
         {
-            if (!FilterColors.TryGetValue(colorIndex, out var color))
+            if (!_filterColors.TryGetValue(colorIndex, out ConsoleColor color))
             {
                 ++_lastFilterColor;
-                if (_lastFilterColor >= AvailableFilterColors.Length)
+                if (_lastFilterColor >= _availableFilterColors.Length)
                 {
                     _lastFilterColor = 0;
                 }
-                color = AvailableFilterColors[_lastFilterColor];
-                FilterColors.Add(colorIndex, color);
+                color = _availableFilterColors[_lastFilterColor];
+                _filterColors.Add(colorIndex, color);
             }
             return color;
         }
 
-        private static readonly ConsoleColor[] AvailableFilesColors = new[]
+        static private ConsoleColor[] _availableFilesColors = new ConsoleColor[]
         {
             ConsoleColor.Gray,
             ConsoleColor.Yellow,
@@ -243,72 +238,63 @@ namespace tailp
             ConsoleColor.Cyan,
             ConsoleColor.Magenta,
         };
-
-        private static readonly Dictionary<int, ConsoleColor> FileColors = new Dictionary<int, ConsoleColor>();
-        private static int _lastFileColor = AvailableFilesColors.Length;
-
-        private static ConsoleColor GetFileForegroundColor(int fileIndex)
+        static private Dictionary<int, ConsoleColor> _fileColors = new Dictionary<int, ConsoleColor>();
+        static private int _lastFileColor = _availableFilesColors.Length;
+        static private ConsoleColor GetFileForegroundColor(int fileIndex)
         {
-            if (!FileColors.TryGetValue(fileIndex, out var color))
+            if (!_fileColors.TryGetValue(fileIndex, out ConsoleColor color))
             {
                 ++_lastFileColor;
-                if (_lastFileColor >= AvailableFilesColors.Length)
+                if (_lastFileColor >= _availableFilesColors.Length)
                 {
                     _lastFileColor = 0;
                 }
-                color = AvailableFilesColors[_lastFileColor];
-                FileColors.Add(fileIndex, color);
+                color = _availableFilesColors[_lastFileColor];
+                _fileColors.Add(fileIndex, color);
             }
             return color;
         }
 
-        private static ConsoleColor TypeToForegroundColor(Types type, int fileIndex)
+        static ConsoleColor TypeToForegroundColor(Types type, int fileIndex)
         {
-            switch (type)
+            switch(type)
             {
                 case Types.Highlight:
                 case Types.Show:
                     return ConsoleColor.Black;
-
                 case Types.Truncated:
                     return ConsoleColor.Red;
-
                 case Types.Error:
                     TaskbarProgress.SetState(TaskbarStates.Error);
                     return ConsoleColor.Red;
-
                 case Types.LineNumber:
                 case Types.FileName:
                     return ConsoleColor.DarkGray;
-
                 default:
-                    return Configs.Follow
+                    return Configuration.Follow
                                 ? GetFileForegroundColor(fileIndex)
                                 : DEFAULT_FOREGROUND;
             }
         }
 
-        private static ConsoleColor TypeToBackgroundColor(Types type, int colorIndex)
+        static ConsoleColor TypeToBackgroundColor(Types type, int colorIndex)
         {
             switch (type)
             {
                 case Types.Show:
                 case Types.Highlight:
                     return GetFilterBackgroundColor(colorIndex);
-
                 case Types.Truncated:
                     return ConsoleColor.DarkRed;
-
                 default:
                     return DEFAULT_BACKGROUND;
             }
         }
 
-        private static readonly object WriteLineLock = new object();
-
-        private static void NewLine()
+        static object _writeLineLock = new object();
+        static void NewLine()
         {
-            lock (WriteLineLock)
+            lock (_writeLineLock)
             {
                 ResetConsoleColors();
                 Console.WriteLine();
@@ -316,11 +302,10 @@ namespace tailp
         }
 
 #pragma warning disable S3242 // Method parameters should be declared with base types
-
-        private static void WriteLine(Line line, int fileIndex)
+        static void WriteLine(Line line, int fileIndex)
 #pragma warning restore S3242 // Method parameters should be declared with base types
         {
-            lock (WriteLineLock)
+            lock (_writeLineLock)
             {
                 line.ForEach(x =>
                 {
@@ -340,10 +325,11 @@ namespace tailp
             }
         }
 
-        private static void WriteMessage(string mess, Types type)
+        static void WriteMessage(string mess, Types type)
         {
-            lock (WriteLineLock)
+            lock (_writeLineLock)
             {
+
                 Console.ForegroundColor = TypeToForegroundColor(type, 0);
                 Console.BackgroundColor = TypeToBackgroundColor(type, 0);
                 Console.WriteLine(mess);

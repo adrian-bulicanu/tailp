@@ -1,12 +1,10 @@
 ﻿// This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
-
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Text;
 
-namespace tailp
+namespace TailP
 {
     public class LogicalLine : List<Line>
     {
@@ -16,6 +14,8 @@ namespace tailp
         public bool IsEmpty => !this.Any();
 
         public int LineNumber => IsEmpty ? 0 : this.First().LineNumber;
+
+        public bool IsFilterFound => this.Any(x => x.IsShowed);
 
         public int FoundShowFiltersCount =>
             this.SelectMany(x => x.FoundShowFilters.Select(y => y))
@@ -45,7 +45,7 @@ namespace tailp
                 sb.AppendLine();
             });
 
-            sb.AppendFormat(CultureInfo.InvariantCulture, @"visible={0}, printed={1}", IsVisible, IsPrinted);
+            sb.AppendFormat(@"visible={0}, printed={1}", IsVisible, IsPrinted);
 
             return sb.ToString();
         }

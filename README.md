@@ -1,4 +1,5 @@
-[![.NET](https://github.com/adrian-bulicanu/tailp/actions/workflows/dotnet.yml/badge.svg)](https://github.com/adrian-bulicanu/tailp/actions/workflows/dotnet.yml) [![Build Status](https://dev.azure.com/adrianbulicanu/tailp/_apis/build/status/adrian-bulicanu.tailp?branchName=master)](https://dev.azure.com/adrianbulicanu/tailp/_build/latest?definitionId=1&branchName=master)
+[![Build status](https://ci.appveyor.com/api/projects/status/y1m45wj4wgjaa6wn?svg=true)](https://ci.appveyor.com/project/adrian-bulicanu/tailp)
+[![Quality Gate](https://sonarcloud.io/api/badges/gate?key=tailp)](https://sonarcloud.io/dashboard/index/tailp)
 
 # tailp
 
@@ -15,7 +16,7 @@ See the [help.txt](tailp/Resources/help.txt) file for details.
 
 ## Prerequisites
 
-.NET 5
+.NET 4.5.2
 
 ## License
 

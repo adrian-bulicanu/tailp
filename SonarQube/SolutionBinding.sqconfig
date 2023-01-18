@@ -1,0 +1,14 @@
+{
+  "ServerUri": "https://sonarcloud.io/",
+  "Organization": {
+    "Key": "adrian-bulicanu-github",
+    "Name": "Adrian.Bulicanu"
+  },
+  "ProjectKey": "tailp",
+  "Profiles": {
+    "CSharp": {
+      "ProfileKey": "AV2pRFZ5_3TVqy6JDy37",
+      "ProfileTimestamp": "2018-03-12T13:56:15+02:00"
+    }
+  }
+}

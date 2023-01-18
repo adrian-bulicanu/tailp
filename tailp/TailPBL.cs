@@ -1,25 +1,22 @@
 ﻿// This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
-
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
 
-namespace tailp
+namespace TailP
 {
 #pragma warning disable S101 // Types should be named in camel case
-
-    public sealed class TailPbl : IDisposable
+    public sealed class TailPBL : IDisposable
 #pragma warning restore S101 // Types should be named in camel case
     {
         public delegate void NewLineFunc(Line line, int fileIndex);
 
-        public TailPbl(NewLineFunc function)
+        public TailPBL(NewLineFunc function)
         {
             NewLineCallback = function ?? throw new ArgumentNullException(nameof(function));
 
@@ -33,30 +30,59 @@ namespace tailp
         private readonly AutoResetEvent _processEvent = new AutoResetEvent(false);
         private readonly ConcurrentQueue<File> _pollFilesToBeProcess = new ConcurrentQueue<File>();
         private readonly ConcurrentQueue<File> _pushFilesToBeProcess = new ConcurrentQueue<File>();
-
         // hashset<File> should be used here, but where is no way to get fast a element from hashset
         private readonly ConcurrentDictionary<string, File> _files =
             new ConcurrentDictionary<string, File>(StringComparer.CurrentCultureIgnoreCase);
-
-        private int _lastFileIndex;
-        public object PrintLock { get; }
-        public NewLineFunc NewLineCallback { get; }
+        private int _lastFileIndex = 0;
+        public object PrintLock { get; private set; }
+        public NewLineFunc NewLineCallback { get; private set; }
 
         private readonly object _lastFileLock = new object();
         private File _lastFile;
-
-        public void SetLastFile(File value)
+        public File LastFile
         {
-            lock (_lastFileLock)
+            get
             {
-                _lastFile = value;
+                File result;
+                lock (_lastFileLock)
+                {
+                    result = _lastFile;
+                }
+                return result;
+            }
+            set
+            {
+                lock (_lastFileLock)
+                {
+                    _lastFile = value;
+                }
             }
         }
-
+        public long LastProcessed
+        {
+            get
+            {
+                lock (_lastFileLock)
+                {
+                    return _lastFile == null ? 0 : _lastFile.LastPos;
+                }
+            }
+        }
         public long TotalProcessed =>
             _files
                 .Where(x => x.Value.FileType != FileTypes.Archive)
                 .Sum(x => x.Value.LastPos);
+
+        public long LastFileSize
+        {
+            get
+            {
+                lock (_lastFileLock)
+                {
+                    return _lastFile == null ? 0 : _lastFile.FileSize;
+                }
+            }
+        }
 
         public long TotalFilesSize => _files.Sum(x => x.Value.FileSize);
 
@@ -79,12 +105,11 @@ namespace tailp
                 .Distinct()
                 .Count();
 
-        // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
-        private static void AdjustAndCheckIndex(ref int index, int lastIndex, string arg)
+        private void AdjustAndCheckIndex(ref int index, int lastIndex, string arg)
         {
             if (index == lastIndex)
             {
-                throw new TailPArgsException($"Invalid arg {arg}");
+                throw new TailPArgsException(string.Format("Invalid arg {0}", arg));
             }
 
             ++index;
@@ -92,14 +117,14 @@ namespace tailp
 
         public void ParseArgs(string[] args)
         {
-            if (args is null || args.Length < 1)
+            if (args.Length < 1)
             {
                 throw new TailPArgsException("Invalid args");
             }
 
             var lastIndex = args.Length - 1;
             var files = new List<string>();
-            for (var i = 0; i != args.Length; ++i)
+            for (int i = 0; i != args.Length; ++i)
             {
                 var arg = args[i];
 
@@ -113,103 +138,85 @@ namespace tailp
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
                         ParseStartLocation(args[i]);
                         break;
-
                     case "-f":
                     case "--follow":
-                        Configs.Follow = true;
+                        Configuration.Follow = true;
                         break;
-
                     case "-n":
                     case "--lines":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
                         ParseNumLines(args[i]);
                         break;
-
                     case "-q":
                     case "--quiet":
                     case "--silent":
-                        Configs.ShowFile = false;
+                        Configuration.ShowFile = false;
                         break;
-
                     case "-v":
                     case "--verbose":
-                        Configs.ShowFile = true;
+                        Configuration.ShowFile = true;
                         break;
-
                     case "-nr":
                     case "--non-recursive":
-                        Configs.Recursive = false;
+                        Configuration.Recursive = false;
                         break;
-
                     case "-l":
                     case "--logical-lines":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
-                        Configs.LogicalLineMarker = args[i];
+                        Configuration.LogicalLineMarker = args[i];
                         break;
-
                     case "-N":
                     case "--line-number":
-                        Configs.ShowLineNumber = true;
+                        Configuration.ShowLineNumber = true;
                         break;
-
                     case "-R":
                     case "--regex":
-                        Configs.Regex = true;
+                        Configuration.Regex = true;
                         break;
-
                     case "-S":
                     case "--show":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
-                        Configs.FiltersShow.Add(args[i]);
+                        Configuration.FiltersShow.Add(args[i]);
                         break;
-
                     case "-H":
                     case "--hide":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
-                        Configs.FiltersHide.Add(args[i]);
+                        Configuration.FiltersHide.Add(args[i]);
                         break;
-
                     case "-L":
                     case "--highlight":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
-                        Configs.FiltersHighlight.Add(args[i]);
+                        Configuration.FiltersHighlight.Add(args[i]);
                         break;
-
                     case "-o":
                     case "--comparison-option":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
                         ParseComparisonOption(args[i]);
                         break;
-
                     case "-a":
                     case "--all":
-                        Configs.AllFilters = true;
+                        Configuration.AllFilters = true;
                         break;
-
                     case "-t":
                     case "--truncate":
-                        Configs.Truncate = true;
+                        Configuration.Truncate = true;
                         break;
-
                     case "-A":
                     case "--after-context":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
-                        Configs.ContextAfter = ParseAndGetContextNumber(args[i]);
+                        Configuration.ContextAfter = ParseAndGetContextNumber(args[i]);
                         break;
-
                     case "-B":
                     case "--before-context":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
-                        Configs.ContextBefore = ParseAndGetContextNumber(args[i]);
+                        Configuration.ContextBefore = ParseAndGetContextNumber(args[i]);
                         break;
-
                     case "-C":
                     case "--context":
                         AdjustAndCheckIndex(ref i, lastIndex, arg);
-                        Configs.ContextAfter =
-                            Configs.ContextBefore = ParseAndGetContextNumber(args[i]);
+                        Configuration.ContextAfter =
+                            Configuration.ContextBefore = ParseAndGetContextNumber(args[i]);
                         break;
-
                     default:
                         files.Add(args[i]);
                         break;
@@ -220,11 +227,9 @@ namespace tailp
                 files.Add(Constants.CONSOLE_FILENAME);
             }
 
-#pragma warning disable RCS1080 // Use 'Count/Length' property instead of 'Any' method.
             if (files.Any())
-#pragma warning restore RCS1080 // Use 'Count/Length' property instead of 'Any' method.
             {
-                files.ForEach(AddFile);
+                files.ForEach(x => AddFile(x));
             }
             else
             {
@@ -234,7 +239,6 @@ namespace tailp
 
         private DateTime _lastForceDetect = DateTime.MinValue;
         private bool _firstTimeDetect = true;
-
         private void ForceDetect()
         {
             if (_lastForceDetect.Add(Constants.FORCE_DETECT_PERIOD) > DateTime.UtcNow)
@@ -257,7 +261,7 @@ namespace tailp
             var actualCount = FilesCount;
             if (actualCount != count || firstTimeDetect)
             {
-                UpdateStatus($"Monitoring {actualCount} files...");
+                UpdateStatus(string.Format("Monitoring {0} files...", actualCount));
             }
 
             _lastForceDetect = DateTime.UtcNow;
@@ -267,9 +271,9 @@ namespace tailp
         {
             Tick();
 
-            Configs.StartLocation = 0; // monitor new files from beginning
+            Configuration.StartLocation = 0; // monitor new files from beginning
 
-            if (Configs.Follow)
+            if (Configuration.Follow)
             {
                 new Thread(() =>
                 {
@@ -279,7 +283,6 @@ namespace tailp
                         _processEvent.WaitOne(Constants.FORCE_DETECT_PERIOD);
                         Tick();
                     }
-                    // ReSharper disable once FunctionNeverReturns
                 }).Start();
             }
             else
@@ -290,7 +293,6 @@ namespace tailp
             }
         }
 
-#pragma warning disable CA2000 // Dispose objects before losing scope
         private void Tick()
         {
             ForceDetect();
@@ -299,38 +301,37 @@ namespace tailp
             while (_pushFilesToBeProcess.Any() || _pollFilesToBeProcess.Any())
             {
                 // because pushed queue may growing continuously, we can never exit
-                for (var i = 0;
+                for (int i = 0;
                          i != Constants.MAX_PUSH_PROCESS_COUNT && _pushFilesToBeProcess.Any();
                          ++i)
                 {
-                    if (_pushFilesToBeProcess.TryDequeue(out var pushFile)
-                        && pushFile.FileType != FileTypes.Archive)
+                    if (_pushFilesToBeProcess.TryDequeue(out File pushFile) &&
+                        pushFile.FileType != FileTypes.Archive)
                     {
                         pushFile.Process();
                     }
                 }
 
-                if (_pollFilesToBeProcess.TryDequeue(out var pollFile)
-                    && pollFile.FileType != FileTypes.Archive)
+                if (_pollFilesToBeProcess.TryDequeue(out File pollFile) &&
+                    pollFile.FileType != FileTypes.Archive)
                 {
                     pollFile.Process();
                 }
             }
         }
-#pragma warning restore CA2000 // Dispose objects before losing scope
 
         private void Created(object sender, FilesMonitorEventArgs e)
         {
             try
             {
-                if (!_files.TryGetValue(e.File, out var file))
+                if (!_files.TryGetValue(e.File, out File file))
                 {
                     file = new File(e.File, this, ++_lastFileIndex);
                     _files.TryAdd(e.File, file);
 
-                    if (!Configs.IsShowFileDefined && _files.Count > 1)
+                    if (!Configuration.IsShowFileDefined && _files.Count > 1)
                     {
-                        Configs.ShowFile = true;
+                        Configuration.ShowFile = true;
                     }
 
                     if (file.FileType == FileTypes.Archive)
@@ -350,104 +351,111 @@ namespace tailp
                     _pollFilesToBeProcess.Enqueue(file);
                 }
             }
-#pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception ex)
-#pragma warning restore CA1031 // Do not catch general exception types
             {
                 NewLineCallback(GetErrorLine(ex.Message), 0);
             }
         }
 
-        private void Changed(object sender, FilesMonitorEventArgs e) => Created(this, e);
+        private void Changed(object sender, FilesMonitorEventArgs e)
+        {
+            Created(this, e);
+        }
 
-        private void Deleted(object sender, FilesMonitorEventArgs e) =>
-            _files.TryRemove(e.File, out _);
+        private void Deleted(object sender, FilesMonitorEventArgs e)
+        {
+            _files.TryRemove(e.File, out File file);
+        }
 
-        private static void UpdateStatus(string s) => Console.Title = s;
+        private void UpdateStatus(string s)
+        {
+            Console.Title = s;
+        }
 
         private void AddFile(string pathMask)
         {
-            FilesMonitor.Add(pathMask, Configs.Follow, this);
+            FilesMonitor.Add(pathMask, Configuration.Follow, this);
 
-            UpdateStatus($"Added {pathMask}");
+            UpdateStatus(string.Format("Added {0}", pathMask));
         }
 
-        private static void ParseStartLocation(string location)
+        private void ParseStartLocation(string location)
         {
-            var loc = location.Trim().ToUpperInvariant();
+            var loc = location.Trim().ToLower();
             if (loc.Length < 2)
             {
                 throw new TailPArgsException(
-                    $"invalid starting location '{location}'");
+                    string.Format("invalid starting location '{0}'", location));
             }
 
             var type = loc.Substring(loc.Length - 1, 1);
-            var start = loc[..^1];
+            var start = loc.Substring(0, loc.Length - 1);
 
             try
             {
-                Configs.StartLocationType = (StartLocationTypes)Enum.Parse(
+                Configuration.StartLocationType = (StartLocationTypes)Enum.Parse(
                     typeof(StartLocationTypes), type);
-                Configs.StartLocation = long.Parse(start, CultureInfo.InvariantCulture);
+                Configuration.StartLocation = long.Parse(start);
             }
             catch (Exception ex)
             {
                 throw new TailPArgsException(
-                    $"invalid starting location '{location}', parse error '{ex.Message}'", ex);
+                    string.Format("invalid starting location '{0}', parse error '{1}'",
+                        location, ex.Message), ex);
             }
         }
 
-        private static int ParseAndGetContextNumber(string context)
+        private int ParseAndGetContextNumber(string context)
         {
-            var num = context.Trim().ToUpperInvariant();
+            var num = context.Trim().ToLower();
 
-            if (num.Length > 0
-                && int.TryParse(num, out var number)
-                && number > 0)
+            if (num.Length > 0 &&
+                int.TryParse(num, out int number) &&
+                number > 0)
             {
                 return number;
             }
 
             throw new TailPArgsException(
-                $"invalid context number '{num}'");
+                string.Format("invalid context number '{0}'", num));
         }
 
-        private static void ParseNumLines(string numLines)
+        private void ParseNumLines(string numLines)
         {
-            var num = numLines.Trim().ToUpperInvariant();
+            var num = numLines.Trim().ToLower();
             if (num.Length < 1)
             {
                 throw new TailPArgsException(
-                    $"invalid number lines '{num}'");
+                    string.Format("invalid number lines '{0}'", num));
             }
 
-            Configs.LinesStartFrom =
+            Configuration.LinesStartFrom =
                 num[0] == '+' ?
-                    NumLinesStart.Begin :
-                    NumLinesStart.End;
+                    NumLinesStart.begin :
+                    NumLinesStart.end;
 
-            if (int.TryParse(num, out var number))
+            if (int.TryParse(num, out int number))
             {
-                Configs.LinesStartNumber = number;
+                Configuration.LinesStartNumber = number;
             }
             else
             {
                 throw new TailPArgsException(
-                    $"invalid number lines '{num}'");
+                    string.Format("invalid number lines '{0}'", num));
             }
         }
 
-        private static void ParseComparisonOption(string option)
+        private void ParseComparisonOption(string option)
         {
             try
             {
-                Configs.ComparisonOptions = (StringComparison)Enum.Parse(
+                Configuration.ComparisonOptions = (StringComparison)Enum.Parse(
                     typeof(StringComparison), option);
             }
             catch (ArgumentException)
             {
                 throw new TailPArgsException(
-                    $"Invalid comparison option '{option}'");
+                    string.Format("Invalid comparison option '{0}'", option));
             }
         }
 
@@ -475,53 +483,41 @@ namespace tailp
 
         public void PrintLogicalLine(LogicalLine logicalLine, int fileIndex)
         {
-            if (logicalLine is null) throw new ArgumentNullException(nameof(logicalLine));
-
-            if (logicalLine.IsPrinted)
+            if (!logicalLine.IsPrinted)
             {
-                return;
+                logicalLine.ForEach(x => NewLineCallback(x, fileIndex));
+                logicalLine.IsPrinted = true;
             }
-
-            logicalLine.ForEach(x => NewLineCallback(x, fileIndex));
-            logicalLine.IsPrinted = true;
         }
 
         private string _lastPrintedFileName = string.Empty;
-
         public void PrintFileName(string fileName, bool force)
         {
-            if (Configs.ShowFile && (force || _lastPrintedFileName != fileName))
+            if (Configuration.ShowFile && (force || _lastPrintedFileName != fileName))
             {
                 NewLineCallback(new Line()
                 {
                     new Token(Types.NewLine, string.Empty),
-                    new Token(Types.FileName, string.Format(CultureInfo.InvariantCulture,
+                    new Token(Types.FileName, string.Format(
                         Constants.FILENAME_PRINT_FORMAT, Path.GetFullPath(fileName)))
                 }, 0);
                 _lastPrintedFileName = fileName;
             }
         }
 
-        public static string GetHelp() =>
+        public string GetHelp() =>
             GetVersion()
           + Environment.NewLine
-          + Properties.Resources.help;
+          + tailp.Properties.Resources.help;
 
-        private static string GetVersion()
+        private string GetVersion()
         {
-            if (Assembly
-                .GetExecutingAssembly()
-                .GetCustomAttributes(typeof(AssemblyInformationalVersionAttribute), false)
-                is AssemblyInformationalVersionAttribute[] attr && attr.Any())
-            {
-                return Constants.HELP_VERSION_HEADER
-                       + Environment.NewLine
-                       + string.Format(CultureInfo.InvariantCulture,
-                           Constants.HELP_VERSION_FORMAT, attr.First().InformationalVersion);
-            }
+            var assembly = Assembly.GetExecutingAssembly().GetName();
 
-            return string.Format(CultureInfo.InvariantCulture,
-                Constants.HELP_VERSION_FORMAT, "Unknown");
+            return Constants.HELP_VERSION_HEADER
+                + Environment.NewLine
+                + string.Format(Constants.HELP_VERSION_FORMAT, assembly.Name, assembly.Version,
+                    tailp.Properties.Resources.BuildDate);
         }
 
         public void Dispose() => _processEvent.Dispose();

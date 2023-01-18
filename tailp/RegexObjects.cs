@@ -1,30 +1,25 @@
 ﻿// This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
-
 using System;
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 
-namespace tailp
+namespace TailP
 {
     public static class RegexObjects
     {
-        private static readonly ConcurrentDictionary<string, Regex> Regexs =
+        private static ConcurrentDictionary<string, Regex> _regexs =
             new ConcurrentDictionary<string, Regex>();
-
         public static Regex GetRegexObject(string filter, Func<Regex> createRegex)
         {
-            if (createRegex is null) throw new ArgumentNullException(nameof(createRegex));
-
-            if (Regexs.TryGetValue(filter, out var result))
+            if (!_regexs.TryGetValue(filter, out Regex result))
             {
-                return result;
+                result = createRegex.Invoke();
+                _regexs.TryAdd(filter, result);
             }
-
-            result = createRegex.Invoke();
-            Regexs.TryAdd(filter, result);
 
             return result;
         }
+
     }
 }

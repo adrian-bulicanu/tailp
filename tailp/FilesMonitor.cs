@@ -1,27 +1,22 @@
 ﻿// This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
-
-using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace tailp
+namespace TailP
 {
+    /// <summary>
+    /// </summary>
     public static class FilesMonitor
     {
-        private static readonly object MonitorEntriesLock = new object();
-
-        private static readonly HashSet<FilesMonitorEntry> MonitorEntries =
+        private static object _monitorEntriesLock = new object();
+        private static HashSet<FilesMonitorEntry> _monitorEntries =
             new HashSet<FilesMonitorEntry>();
 
 #pragma warning disable S3264 // Events should be invoked
-
-        public static event EventHandler<FilesMonitorEventArgs> Created;
-
-        public static event EventHandler<FilesMonitorEventArgs> Deleted;
-
-        public static event EventHandler<FilesMonitorEventArgs> Changed;
-
+        public static event FilesMonitorEntryHandler Created;
+        public static event FilesMonitorEntryHandler Deleted;
+        public static event FilesMonitorEntryHandler Changed;
 #pragma warning restore S3264 // Events should be invoked
 
         /// <summary>
@@ -31,21 +26,21 @@ namespace tailp
         public static void ForceProcess()
         {
             List<FilesMonitorEntry> entries;
-            lock (MonitorEntriesLock)
+            lock (_monitorEntriesLock)
             {
-                entries = MonitorEntries.ToList();
+                entries = _monitorEntries.ToList();
             }
             entries.ForEach(x => x.ForceProcess());
         }
 
-        public static void Add(string path, bool follow, TailPbl bl)
+        public static void Add(string path, bool follow, TailPBL bl)
         {
             var entry = new FilesMonitorEntry(path, bl);
 
-            bool added;
-            lock (MonitorEntriesLock)
+            var added = false;
+            lock (_monitorEntriesLock)
             {
-                added = MonitorEntries.Add(entry);
+                added = _monitorEntries.Add(entry);
             }
 
             if (added)

@@ -1,9 +1,8 @@
 ﻿// This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
-
 using System;
 
-namespace tailp
+namespace TailP
 {
     public static class TimespanExtensions
     {
@@ -12,22 +11,22 @@ namespace tailp
         {
             if (t.TotalMinutes < 1)
             {
-                return $"{(int) t.TotalSeconds} second(s)";
+                return string.Format("{0} second(s)", (int)t.TotalSeconds);
             }
             if (t.TotalHours < 1)
             {
-                return $"{(int) t.TotalMinutes}:{t.Seconds:00} minute(s)";
+                return string.Format("{0}:{1:00} minute(s)", (int)t.TotalMinutes, t.Seconds);
             }
             if (t.TotalDays < 1)
             {
-                return $"{(int) t.TotalHours}:{t.Minutes:00} hour(s)";
+                return string.Format("{0}:{1:00} hour(s)", (int)t.TotalHours, t.Minutes);
             }
             if (t.TotalDays < 2)
             {
-                return $"over {(int) t.TotalHours} hour(s)";
+                return string.Format("over {0} hour(s)", (int)t.TotalHours);
             }
 
-            return $"over {(int) t.TotalDays} day(s)";
+            return string.Format("over {0} day(s)", (int)t.TotalDays);
         }
     }
 }

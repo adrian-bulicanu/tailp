@@ -1,18 +1,17 @@
 ﻿// This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
-
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace tailp
+namespace TailP
 {
     public class FilesMonitorEventArgs : EventArgs
     {
-        public string File { get; }
-        public object Sender { get; }
+        public string File { get; private set; }
+        public object Sender { get; private set; }
 
         public FilesMonitorEventArgs(object sender, string file)
         {
@@ -21,31 +20,30 @@ namespace tailp
         }
 
         public override string ToString() =>
-            $"file: {File}, sender: {Sender}";
+            string.Format("file: {0}, sender: {1}", File, Sender);
     }
+
+    public delegate void FilesMonitorEntryHandler(object sender, FilesMonitorEventArgs e);
 
     public sealed class FilesMonitorEntry : IDisposable
     {
-        private string Folder { get; }
-        private string Mask { get; }
-        private FileTypes FileType { get; }
+        public string Folder { get; private set; }
+        public string Mask { get; private set; }
+        public FileTypes FileType { get; private set; }
 
         private readonly object _filesLock = new object();
-
         private readonly HashSet<string> _files =
             new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
 
-        public event EventHandler<FilesMonitorEventArgs> Created;
-
-        public event EventHandler<FilesMonitorEventArgs> Deleted;
-
-        public event EventHandler<FilesMonitorEventArgs> Changed;
+        public event FilesMonitorEntryHandler Created;
+        public event FilesMonitorEntryHandler Deleted;
+        public event FilesMonitorEntryHandler Changed;
 
         private readonly object _watcherLock = new object();
-        private FileSystemWatcher _watcher;
-        private readonly TailPbl _bl;
+        private FileSystemWatcher _watcher = null;
+        private readonly TailPBL _bl;
 
-        public FilesMonitorEntry(string path, TailPbl bl)
+        public FilesMonitorEntry(string path, TailPBL bl)
         {
             if (path == Constants.CONSOLE_FILENAME)
             {
@@ -53,7 +51,7 @@ namespace tailp
                 Folder = string.Empty;
                 Mask = Constants.CONSOLE_FILENAME;
             }
-            else if (ArchiveSupport.TryGetArchivePath(path, out var archive, out var file))
+            else if (ArchiveSupport.TryGetArchivePath(path, out string archive, out string file))
             {
                 FileType = FileTypes.Archive;
                 Folder = archive;
@@ -66,7 +64,7 @@ namespace tailp
                 FileType = IsWildcard ? FileTypes.Wildcard : FileTypes.Regular;
             }
 
-            if ((Folder == null || string.IsNullOrEmpty(Folder.Trim())) && FileType != FileTypes.Console)
+            if (string.IsNullOrEmpty(Folder.Trim()) && FileType != FileTypes.Console)
             {
                 Folder = ".";
             }
@@ -77,17 +75,15 @@ namespace tailp
         private void ForceProcessRegular() =>
             InternalCreatedOrChanged(this, Path.Combine(Folder, Mask));
 
-        private static bool IsExceptionIgnored(Exception ex) =>
-            ex is UnauthorizedAccessException
-            || ex is PathTooLongException
-            || ex is System.Security.SecurityException
-            || ex is IOException;
+        private bool IsExceptionIgnored(Exception ex) =>
+            ex is UnauthorizedAccessException ||
+            ex is PathTooLongException ||
+            ex is System.Security.SecurityException ||
+            ex is IOException;
 
         private readonly HashSet<string> _invalidPathes =
             new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
-
         private readonly object _invalidPathesLock = new object();
-
         private void PrintErrorOnlyFirstTime(string path, string error)
         {
             bool isNewError;
@@ -97,7 +93,7 @@ namespace tailp
             }
             if (isNewError)
             {
-                _bl.NewLineCallback(TailPbl.GetErrorLine(error), 0);
+                _bl.NewLineCallback(TailPBL.GetErrorLine(error), 0);
             }
         }
 
@@ -157,7 +153,7 @@ namespace tailp
             }
 
             foreach (var f in DirectoryEnumerateFiles(Folder, Mask,
-                Configs.Recursive ?
+                Configuration.Recursive ?
                     SearchOption.AllDirectories :
                     SearchOption.TopDirectoryOnly))
             {
@@ -192,22 +188,19 @@ namespace tailp
                 case FileTypes.Regular:
                     ForceProcessRegular();
                     break;
-
                 case FileTypes.Wildcard:
                     ForceProcessWildcard();
                     break;
-
                 case FileTypes.Archive:
                     ForceProcessArchive();
                     break;
-
                 default:
                     throw new InvalidOperationException(
-                        $"Unknown FileType {FileType}");
+                        string.Format("Unknown FileType {0}", FileType));
             }
         }
 
-        private bool IsWildcard => Mask.IndexOfAny(new[] { '?', '*' }) != -1;
+        private bool IsWildcard => Mask.IndexOfAny(new char[] { '?', '*' }) != -1;
 
         private void InternalCreatedOrChanged(object sender, string file)
         {
@@ -216,7 +209,7 @@ namespace tailp
                 return;
             }
 
-            bool added;
+            var added = false;
             lock (_filesLock)
             {
                 added = _files.Add(file);
@@ -234,7 +227,7 @@ namespace tailp
 
         private void InternalRemoved(object sender, string file)
         {
-            bool removed;
+            var removed = false;
             lock (_filesLock)
             {
                 removed = _files.Remove(file);
@@ -273,17 +266,17 @@ namespace tailp
 
                 _watcher.Error += (s, e) =>
                 {
-                    Task.Delay(Constants.WAIT_ON_ERROR).ContinueWith(_ =>
+                    Task.Delay(Constants.WAIT_ON_ERROR).ContinueWith((t) =>
                     {
                         lock (_watcherLock)
                         {
                             DeleteWatcher();
                             BeginMonitor();
                         }
-                    }, TaskScheduler.Default);
+                    });
                 };
 
-                _watcher.IncludeSubdirectories = Configs.Recursive;
+                _watcher.IncludeSubdirectories = Configuration.Recursive;
                 _watcher.EnableRaisingEvents = true;
             }
         }
@@ -309,14 +302,13 @@ namespace tailp
         {
             if (obj == null) return false;
 
-            var f = (FilesMonitorEntry)obj;
+            var f = obj as FilesMonitorEntry;
+            if (f == null) return false;
 
-            return Mask.Equals(f.Mask, StringComparison.OrdinalIgnoreCase)
-                && Folder.Equals(f.Folder, StringComparison.OrdinalIgnoreCase);
+            return Mask.Equals(f.Mask, StringComparison.InvariantCultureIgnoreCase)
+                && Folder.Equals(f.Folder, StringComparison.InvariantCultureIgnoreCase);
         }
 
-        public override int GetHashCode() =>
-              Mask.GetHashCode(StringComparison.OrdinalIgnoreCase)
-            ^ Folder.GetHashCode(StringComparison.OrdinalIgnoreCase);
+        public override int GetHashCode() => Mask.GetHashCode() ^ Folder.GetHashCode();
     }
 }

@@ -1,15 +1,14 @@
 ﻿// This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
-
 using System;
 
-namespace tailp
+namespace TailP
 {
     public class Token
     {
-        public Types Type { get; }
+        public Types Type { get; private set; }
         public string Text { get; set; }
-        public int ColorIndex { get; }
+        public int ColorIndex { get; private set; }
 
         public Token(Types type, string text)
         {
@@ -38,15 +37,19 @@ namespace tailp
                 return false;
             }
 
-            var other = (Token)obj;
+            var other = obj as Token;
+            if (other == null)
+            {
+                return false;
+            }
 
-            return Type == other.Type
-                   && Text == other.Text
-                   && ColorIndex == other.ColorIndex;
+            return Type == other.Type &&
+                   Text == other.Text &&
+                   ColorIndex == other.ColorIndex;
         }
 
         public override int GetHashCode() =>
-            Type.GetHashCode() ^ ColorIndex.GetHashCode();
+            Type.GetHashCode() ^ Text.GetHashCode() ^ ColorIndex.GetHashCode();
 
         public override string ToString() => Text;
     }
