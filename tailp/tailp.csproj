@@ -102,7 +102,7 @@
       <Version>3.0.41</Version>
     </PackageReference>
     <PackageReference Include="SharpCompress">
-      <Version>0.18.2</Version>
+      <Version>0.29.0</Version>
     </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
