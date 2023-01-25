@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26430.14
+# Visual Studio Version 17
+VisualStudioVersion = 17.3.32929.385
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "tailp", "tailp\tailp.csproj", "{2343C363-B5C1-4C1C-8E2F-CFFBD6AF763E}"
 EndProject
@@ -9,16 +9,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "tailpTests", "tailpTests\ta
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{D640F67D-88B5-445E-8BFC-4EF9F1C9176D}"
 	ProjectSection(SolutionItems) = preProject
-		appveyor.yml = appveyor.yml
 		docs\man_grep.txt = docs\man_grep.txt
 		docs\man_tail.txt = docs\man_tail.txt
 		README.md = README.md
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SonarQube", "SonarQube", "{78C725DB-E71A-4207-BF95-AAA8B281C7E4}"
-	ProjectSection(SolutionItems) = preProject
-		SonarQube\SolutionBinding.sqconfig = SonarQube\SolutionBinding.sqconfig
-		SonarQube\tailpCSharp.ruleset = SonarQube\tailpCSharp.ruleset
 	EndProjectSection
 EndProject
 Global
@@ -41,5 +34,6 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		VisualSVNWorkingCopyRoot = .
+		SolutionGuid = {4D752FAE-1587-46F4-ADE9-766EE2C0D315}
 	EndGlobalSection
 EndGlobal
