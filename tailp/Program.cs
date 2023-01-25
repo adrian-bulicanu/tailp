@@ -132,11 +132,15 @@ namespace TailP
                 _secondsPerPercent.Dequeue();
             }
 
-            var estimated = _secondsPerPercent.Count == SAMPLES_COUNT
-                ? TimeSpan.FromSeconds(
-                    Math.Round(_secondsPerPercent.Average() * (100 - percents))
-                    )
-                : TimeSpan.FromSeconds(0);
+            var estimated = TimeSpan.FromSeconds(0);
+            if (_secondsPerPercent.Count == SAMPLES_COUNT)
+            {
+                var seconds = Math.Round(_secondsPerPercent.Average() * (100 - percents));
+                if (!double.IsNaN(seconds))
+                {
+                    estimated = TimeSpan.FromSeconds(seconds);
+                }
+            }
 
             if (estimated > TimeSpan.FromSeconds(5))
             {
