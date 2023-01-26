@@ -1,13 +1,13 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using TailP;
+﻿using TailP;
 using System.Collections.Generic;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace tailpTests
 {
     [TestClass]
     public class ArchiveSupportTests
     {
-//        ArchiveSupport _fixture;
+        const string root = @"..\..\..\TestFiles\";
 
         [TestInitialize]
         public void Initialize()
@@ -17,10 +17,10 @@ namespace tailpTests
         [TestMethod]
         public void ArchiveSupportTest00TryGetArchivePath()
         {
-            string path = @"..\..\TestFiles\1.zip";
+            string path = root + @"1.zip";
 
             var expResult = true;
-            var expArchive = @"..\..\TestFiles\1.zip";
+            var expArchive = root + @"1.zip";
             var expFile = string.Empty;
 
             var actArchive = string.Empty;
@@ -35,10 +35,10 @@ namespace tailpTests
         [TestMethod]
         public void ArchiveSupportTest01TryGetArchivePath()
         {
-            string path = @"..\..\TestFiles\1.zip\";
+            string path = root + @"1.zip\";
 
             var expResult = true;
-            var expArchive = @"..\..\TestFiles\1.zip";
+            var expArchive = root + @"1.zip";
             var expFile = string.Empty;
 
             var actArchive = string.Empty;
@@ -53,10 +53,10 @@ namespace tailpTests
         [TestMethod]
         public void ArchiveSupportTest02TryGetArchivePath()
         {
-            string path = @"..\..\TestFiles\1.zip\1\3\Annotations.cs";
+            string path = root + @"1.zip\1\3\Annotations.cs";
 
             var expResult = true;
-            var expArchive = @"..\..\TestFiles\1.zip";
+            var expArchive = root + @"1.zip";
             var expFile = @"1\3\Annotations.cs";
 
             var actArchive = string.Empty;
@@ -71,7 +71,7 @@ namespace tailpTests
         [TestMethod]
         public void ArchiveSupportTest03TryGetArchivePath()
         {
-            string path = @"..\..\TestFiles\1.txt\1\3\Annotations.cs";
+            string path = root + @"1.txt\1\3\Annotations.cs";
 
             var expResult = false;
 
@@ -85,10 +85,10 @@ namespace tailpTests
         [TestMethod]
         public void ArchiveSupportTest04TryGetArchivePath()
         {
-            string path = @"..\..\TestFiles\1.zip\*.cs";
+            string path = root + @"1.zip\*.cs";
 
             var expResult = true;
-            var expArchive = @"..\..\TestFiles\1.zip";
+            var expArchive = root + @"1.zip";
             var expFile = @"*.cs";
 
             var actArchive = string.Empty;
@@ -103,7 +103,7 @@ namespace tailpTests
         [TestMethod]
         public void ArchiveSupportTest05IsValidArchiveZip()
         {
-            string path = @"..\..\TestFiles\1.zip";
+            string path = root + @"1.zip";
 
             var expResult = true;
             var actResult = ArchiveSupport.IsValidArchive(path);
@@ -114,7 +114,7 @@ namespace tailpTests
         [TestMethod]
         public void ArchiveSupportTest05IsValidArchiveRar()
         {
-            string path = @"..\..\TestFiles\Properties.rar";
+            string path = root + @"Properties.rar";
 
             var expResult = true;
             var actResult = ArchiveSupport.IsValidArchive(path);
@@ -125,7 +125,7 @@ namespace tailpTests
         [TestMethod]
         public void ArchiveSupportTest06IsValidArchive()
         {
-            string path = @"..\..\TestFiles\invalid.zip";
+            string path = root + @"invalid.zip";
 
             var expResult = false;
             var actResult = ArchiveSupport.IsValidArchive(path);
@@ -136,7 +136,7 @@ namespace tailpTests
         [TestMethod]
         public void ArchiveSupportTest07IsValidArchive()
         {
-            string path = @"..\..\TestFiles\dummytext.txt";
+            string path = root + @"dummytext.txt";
 
             var expResult = false;
             var actResult = ArchiveSupport.IsValidArchive(path);
@@ -147,7 +147,7 @@ namespace tailpTests
         [TestMethod]
         public void ArchiveSupportTest08EnumerateFiles()
         {
-            string path = @"..\..\TestFiles\dummytext.txt";
+            string path = root + @"dummytext.txt";
 
             Assert.ThrowsException<TailPArchiveException>(() => ArchiveSupport.EnumerateFiles(path));
         }
@@ -155,7 +155,7 @@ namespace tailpTests
         [TestMethod]
         public void ArchiveSupportTest09EnumerateFiles()
         {
-            string path = @"..\..\TestFiles\1.zip\1\3\Annotations.cs";
+            string path = root + @"1.zip\1\3\Annotations.cs";
 
             var exp = new List<string>()
             {
@@ -168,7 +168,7 @@ namespace tailpTests
         [TestMethod]
         public void ArchiveSupportTest10EnumerateFiles()
         {
-            string path = @"..\..\TestFiles\1.zip\*.cs";
+            string path = root + @"1.zip\*.cs";
 
             var exp = new List<string>()
             {
@@ -185,7 +185,7 @@ namespace tailpTests
         [TestMethod]
         public void ArchiveSupportTest11EnumerateFiles()
         {
-            string path = @"..\..\TestFiles\1.zip\1\?\Annotations - Copy.cs";
+            string path = root + @"1.zip\1\?\Annotations - Copy.cs";
 
             var exp = new List<string>()
             {
@@ -198,7 +198,7 @@ namespace tailpTests
         [TestMethod]
         public void ArchiveSupportTest12EnumerateFiles()
         {
-            string path = @"..\..\TestFiles\1.zip";
+            string path = root + @"1.zip";
 
             var exp = new List<string>()
             {

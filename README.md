@@ -13,7 +13,7 @@ See the [help.txt](tailp/Resources/help.txt) file for details.
 
 ## Prerequisites
 
-.NET 4.5.2
+.NET 6
 
 ## License
 
