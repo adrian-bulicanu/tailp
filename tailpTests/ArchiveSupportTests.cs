@@ -7,7 +7,7 @@ namespace tailpTests
     [TestClass]
     public class ArchiveSupportTests
     {
-        const string root = @"..\..\..\TestFiles\";
+        const string root = @"../../../TestFiles/";
 
         [TestInitialize]
         public void Initialize()
@@ -35,7 +35,7 @@ namespace tailpTests
         [TestMethod]
         public void ArchiveSupportTest01TryGetArchivePath()
         {
-            string path = root + @"1.zip\";
+            string path = root + @"1.zip/";
 
             var expResult = true;
             var expArchive = root + @"1.zip";
@@ -53,11 +53,11 @@ namespace tailpTests
         [TestMethod]
         public void ArchiveSupportTest02TryGetArchivePath()
         {
-            string path = root + @"1.zip\1\3\Annotations.cs";
+            string path = root + @"1.zip/1/3/Annotations.cs";
 
             var expResult = true;
             var expArchive = root + @"1.zip";
-            var expFile = @"1\3\Annotations.cs";
+            var expFile = @"1/3/Annotations.cs";
 
             var actArchive = string.Empty;
             var actFile = string.Empty;
@@ -71,7 +71,7 @@ namespace tailpTests
         [TestMethod]
         public void ArchiveSupportTest03TryGetArchivePath()
         {
-            string path = root + @"1.txt\1\3\Annotations.cs";
+            string path = root + @"1.txt/1/3/Annotations.cs";
 
             var expResult = false;
 
@@ -85,7 +85,7 @@ namespace tailpTests
         [TestMethod]
         public void ArchiveSupportTest04TryGetArchivePath()
         {
-            string path = root + @"1.zip\*.cs";
+            string path = root + @"1.zip/*.cs";
 
             var expResult = true;
             var expArchive = root + @"1.zip";
@@ -155,7 +155,7 @@ namespace tailpTests
         [TestMethod]
         public void ArchiveSupportTest09EnumerateFiles()
         {
-            string path = root + @"1.zip\1\3\Annotations.cs";
+            string path = root + @"1.zip/1/3/Annotations.cs";
 
             var exp = new List<string>()
             {
@@ -168,7 +168,7 @@ namespace tailpTests
         [TestMethod]
         public void ArchiveSupportTest10EnumerateFiles()
         {
-            string path = root + @"1.zip\*.cs";
+            string path = root + @"1.zip/*.cs";
 
             var exp = new List<string>()
             {
@@ -185,7 +185,7 @@ namespace tailpTests
         [TestMethod]
         public void ArchiveSupportTest11EnumerateFiles()
         {
-            string path = root + @"1.zip\1\?\Annotations - Copy.cs";
+            string path = root + @"1.zip/1/?/Annotations - Copy.cs";
 
             var exp = new List<string>()
             {

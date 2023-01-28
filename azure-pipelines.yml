@@ -33,6 +33,7 @@ steps:
     configuration: '$(buildConfiguration)'
     testAssemblyVer2: |
       **\tailptests.dll
+      **/tailptests.dll
       !**\obj\**
       !**/obj/**
     codeCoverageEnabled: true
