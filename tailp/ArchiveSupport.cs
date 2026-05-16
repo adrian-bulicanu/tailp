@@ -1,6 +1,7 @@
 ﻿// This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 using SharpCompress.Archives;
+using SharpCompress.Readers;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -155,7 +156,7 @@ namespace TailP
                 if (!_archives.TryGetValue(archive, out IArchive arch))
                 {
                     var fs = new FileStream(archive, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                    arch = ArchiveFactory.Open(fs);
+                    arch = ArchiveFactory.OpenArchive(fs, new ReaderOptions());
                     _archives.Add(archive, arch);
                 }
 

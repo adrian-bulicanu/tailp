@@ -1,6 +1,7 @@
 ﻿// This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 using System;
+using System.IO;
 using System.Text.RegularExpressions;
 
 namespace TailP
@@ -53,6 +54,49 @@ namespace TailP
             }
 
             return matches.Count > 0;
+        }
+
+        public static bool TryGetConsoleWindowWidth(out int width)
+        {
+            width = 0;
+            try
+            {
+                width = Console.WindowWidth;
+                return true;
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+            catch (PlatformNotSupportedException)
+            {
+                return false;
+            }
+            catch (System.Security.SecurityException)
+            {
+                return false;
+            }
+        }
+
+        public static bool TrySetConsoleTitle(string title)
+        {
+            try
+            {
+                Console.Title = title;
+                return true;
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+            catch (PlatformNotSupportedException)
+            {
+                return false;
+            }
+            catch (System.Security.SecurityException)
+            {
+                return false;
+            }
         }
     }
 }

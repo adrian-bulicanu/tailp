@@ -369,7 +369,7 @@ namespace TailP
 
         private void UpdateStatus(string s)
         {
-            Console.Title = s;
+            Utils.TrySetConsoleTitle(s);
         }
 
         private void AddFile(string pathMask)

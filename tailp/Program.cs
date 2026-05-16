@@ -99,8 +99,12 @@ namespace TailP
                     DateTime.Now.Subtract(_lastChanged).ToHumanReadableString(),
                     files);
 
-                Console.Title = title.AppendFromRight(
-                    Path.GetFullPath(_bl.LastFileName), Console.WindowWidth);
+                if (Utils.TryGetConsoleWindowWidth(out var width))
+                {
+                    var safeTitle = title.AppendFromRight(
+                        Path.GetFullPath(_bl.LastFileName), width);
+                    Utils.TrySetConsoleTitle(safeTitle);
+                }
 
                 UpdateProgressBar(percents);
             }
