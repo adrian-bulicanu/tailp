@@ -24,7 +24,7 @@
     <Content Include="Resources\BuildDate.txt" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="SharpCompress" Version="0.45.1" />
+    <PackageReference Include="SharpCompress" Version="0.48.1" />
     <PackageReference Include="System.Data.DataSetExtensions" Version="4.5.0" />
   </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
