@@ -2,6 +2,7 @@
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 using SharpCompress.Archives;
 using SharpCompress.Readers;
+using SharpCompress.Common;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -58,6 +59,14 @@ namespace TailP
                     return true;
                 }
                 catch (InvalidOperationException)
+                {
+                    return false;
+                }
+                catch (ArchiveException)
+                {
+                    return false;
+                }
+                catch (ArchiveOperationException)
                 {
                     return false;
                 }
@@ -202,6 +211,14 @@ namespace TailP
                 }
             }
             catch (InvalidOperationException ex)
+            {
+                throw new TailPArchiveException(ex.Message, ex);
+            }
+            catch (ArchiveException ex)
+            {
+                throw new TailPArchiveException(ex.Message, ex);
+            }
+            catch (ArchiveOperationException ex)
             {
                 throw new TailPArchiveException(ex.Message, ex);
             }
